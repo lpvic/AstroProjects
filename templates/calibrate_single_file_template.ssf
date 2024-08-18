@@ -1,0 +1,3 @@
+requires {{siril_version}}
+
+calibrate_single {{image}} -bias={{master_bias}} -prefix=pp_

@@ -5,7 +5,7 @@ from dateutil import tz
 import pandas as pd
 from astropy.io import fits
 
-from ioutils import mkdir, move_file
+from ioutils import mkdir, move_file, get_file_list
 
 
 pd.set_option('display.max_rows', None)
@@ -13,9 +13,9 @@ pd.set_option('display.max_columns', None)
 pd.set_option('display.width', None)
 pd.set_option('display.max_colwidth', None)
 
-fields_ordered = ['ASIAIRFILE', 'IMAGETYP', 'DATE-OBS', 'SESSION', 'SEQUENCE', 'FRAME', 'INSTRUME', 'FILTER',
+fields_ordered = ['ASIFILE', 'IMAGETYP', 'DATE-OBS', 'SESSION', 'SEQUENCE', 'FRAME', 'INSTRUME', 'FILTER',
                   'EXPOSURE', 'XBINNING', 'GAIN', 'SET-TEMP', 'GUIDECAM', 'MOUNT', 'TELESCOP', 'LENS', 'FOCALLEN',
-                  'OBJECT', 'OBSERVER',  'SITENAME', 'SITELAT', 'SITELON', 'NEWFOLDER', 'NEWFILENAME']
+                  'OBJECT', 'OBSERVER',  'SITENAME', 'SITELAT', 'SITELON', 'NEWFOLD', 'NEWFILE']
 
 
 def update_dict(source_dict: dict, new_values: dict) -> dict:
@@ -24,8 +24,20 @@ def update_dict(source_dict: dict, new_values: dict) -> dict:
     return source_dict
 
 
-def get_fields_from_filename(filename: str) -> dict:
-    pass
+def get_fields_from_foldername(foldername: str) -> dict:
+    out = {}
+    fields = os.path.basename(foldername).split('_')
+    out['IMAGETYP'] = fields[0].title()
+
+    if out['IMAGETYP'] == 'Dark':
+        pass
+    elif out['IMAGETYP'] == 'Flat':
+        pass
+    elif out['IMAGETYP'] == 'Light':
+        out = {**out, 'OBJECT': fields[1], 'SESSION': int(fields[2]), 'SEQUENCE': int(fields[3]),
+               'EXPOSURE': float(fields[4][:-2]) / 1000.}
+
+    return out
 
 
 def get_fields_from_fits(filename: str) -> dict:
@@ -45,11 +57,10 @@ def get_fields_from_fits(filename: str) -> dict:
 
 
 def update_fits_fields(filename: str, new_data: dict) -> None:
-    with fits.open(filename) as fits_file:
+    with fits.open(filename, mode='update') as fits_file:
         header = fits_file[0].header
         for field in list(new_data.keys()):
             header[field] = new_data[field]
-        fits_file.flush()
 
 
 def initialize_folders(from_folder: str) -> None:
@@ -129,7 +140,9 @@ def create_fits_import_list(from_folder: str, to_folder: str) -> None:
     if os.path.exists(os.path.join(to_folder, r'asiair_imported_files.csv')):
         df0 = pd.read_csv(os.path.join(to_folder, r'asiair_imported_files.csv'), sep=';', na_values=['NaN'],
                           keep_default_na=False)
-    db = []
+        db = df0.to_dict('records')
+    else:
+        db = []
 
     fields = ['IMAGETYP', 'FOCALLEN', 'SET-TEMP', 'XBINNING', 'EXPOSURE', 'DATE-OBS', 'FILTER', 'INSTRUME', 'GUIDECAM',
               'GAIN', 'TELESCOP', 'OBJECT', 'LENS']
@@ -140,7 +153,7 @@ def create_fits_import_list(from_folder: str, to_folder: str) -> None:
             original_file = os.path.relpath(os.path.join(folder, filename), from_folder)
 
             if not df0.empty:
-                if original_file in df0['ASIAIRFILE'].values:
+                if original_file in df0['ASIFILE'].values:
                     continue
 
             if is_astrofile(filename) and os.path.getsize(os.path.join(folder, filename)) != 0:
@@ -150,7 +163,7 @@ def create_fits_import_list(from_folder: str, to_folder: str) -> None:
                 except ValueError:
                     continue
 
-                data = update_dict(data, {'ASIAIRFILE': original_file,
+                data = update_dict(data, {'ASIFILE': original_file,
                                           'OBSERVER': 'Luis Pedro Vicente Matilla', 'MOUNT': 'ZWO AM5',
                                           'SITENAME': 'Otero de Bodas, Spain', 'SITELAT': '41 56 17 N',
                                           'SITELON': '06 09 03 W', 'FRAME': frame_num})
@@ -179,7 +192,8 @@ def create_fits_import_list(from_folder: str, to_folder: str) -> None:
                                               'SITENAME': '', 'SITELAT': '', 'SITELON': ''})
                 elif data['IMAGETYP'] == 'Light':
                     data = update_dict(data, {'TELESCOP': get_telescope(data['FOCALLEN']),
-                                              'LENS': get_lens(data['FOCALLEN']), 'OBJECT': filename.split('_')[1],
+                                              'LENS': get_lens(data['FOCALLEN']),
+                                              'OBJECT': filename.split('_')[1].replace(' ', ''),
                                               'FILTER': 'Unk' if data['FILTER'] == '' else data['FILTER']})
 
                 db.append(data)
@@ -187,56 +201,74 @@ def create_fits_import_list(from_folder: str, to_folder: str) -> None:
 
     sorted_db = sorted(db, key=lambda d: d['DATE-OBS'])
     sorted_db[0]['SEQUENCE'] = 1
+    sorted_db[0]['NEWFOLD'] = create_foldername(sorted_db[0])
+    sorted_db[0]['NEWFILE'] = create_filename(sorted_db[0])
     seq = 1
     for i in range(1, len(sorted_db)):
-        print(i, sorted_db[i]['ASIAIRFILE'])
         if sorted_db[i]['SESSION'] != sorted_db[i - 1]['SESSION']:
             seq = 1
         elif sorted_db[i]['FRAME'] <= sorted_db[i - 1]['FRAME']:
             seq = seq + 1
         sorted_db[i]['SEQUENCE'] = seq
-        sorted_db[i]['NEWFOLDER'] = create_foldername(sorted_db[i])
-        sorted_db[i]['NEWFILENAME'] = create_filename(sorted_db[i])
+        sorted_db[i]['NEWFOLD'] = create_foldername(sorted_db[i])
+        sorted_db[i]['NEWFILE'] = create_filename(sorted_db[i])
 
-    df = pd.DataFrame(db)
+    df = pd.DataFrame(sorted_db)
     df = df[fields_ordered]
     df.to_csv(os.path.join(to_folder, r'asiair_imported_files.csv'), sep=';', index=False)
 
 
-def apply_corrections(to_folder) -> None:
-    fits_df = pd.read_csv(os.path.join(to_folder, r'asiair_raw.csv'), sep=';', na_values=['NaN'],
-                          keep_default_na=False)
-    filter_df = pd.read_csv(os.path.join(to_folder, r'filter_correction.csv'), na_values=['NaN'],
+def import_fits(from_folder: str, to_folder: str, import_file: str = 'asiair_imported_files.csv') -> None:
+    sub_folders = {'Dark': r'Darks\sources', 'Flat': r'Flats\sources', 'Light': r'Lights'}
+    df_import = pd.read_csv(os.path.join(to_folder, import_file), sep=';', na_values=['NaN'], keep_default_na=False)
+
+    flog = open(os.path.join(to_folder, 'moved.log'), 'w')
+
+    for idx, row in df_import.iterrows():
+        src_file = os.path.join(from_folder, row['ASIFILE'])
+        dst_folder = os.path.join(to_folder, sub_folders[row['IMAGETYP']], row['NEWFOLD'])
+        dst_file = os.path.join(dst_folder, row['NEWFILE'])
+
+        if not os.path.exists(src_file):
+            continue
+
+        if not os.path.exists(dst_folder):
+            mkdir(dst_folder)
+
+        if not os.path.exists(dst_file):
+            move_file(src_file, dst_file)
+            update_fits_fields(dst_file, row.to_dict())
+            flog.write(src_file + ' -> ' + dst_file + '\n')
+    flog.close()
+
+
+def apply_corrections(in_folder: str, corrections_file: str) -> None:
+    sub_folders = {'Dark': r'Darks\sources', 'Flat': r'Flats\sources', 'Light': r'Lights'}
+    df_corrections = pd.read_csv(os.path.join(in_folder, corrections_file), sep=';', na_values=['NaN'],
                             keep_default_na=False)
 
-    object_df = pd.read_csv(os.path.join(to_folder, r'object_correction.csv'), na_values=['NaN'],
-                            keep_default_na=False)
+    for idx, row in df_corrections.iterrows():
+        img_type = row['NEWFOLD'].split('_')[0].title()
+        dst_folder = os.path.join(in_folder, sub_folders[img_type], row['NEWFOLD'])
 
-    fits_df = fits_df.merge(filter_df, on='ASIAIRFILE', how='left')
-    fits_df['FILTER_y'] = fits_df['FILTER_y'].fillna('')
-    fits_df.drop(['FILTER_x'], inplace=True, axis=1)
-    fits_df.rename(columns={'FILTER_y': 'FILTER'}, inplace=True)
-    fits_df = fits_df[fields_ordered]
+        if not os.path.exists(dst_folder):
+            continue
 
-    fits_df = fits_df.merge(object_df, on='ASIAIRFILE', how='left')
-    fits_df['OBJECT_y'] = fits_df['OBJECT_y'].fillna('')
-    fits_df.drop(['OBJECT_x'], inplace=True, axis=1)
-    fits_df.rename(columns={'OBJECT_y': 'OBJECT'}, inplace=True)
-    fits_df = fits_df[fields_ordered]
-
-    fits_df.to_csv(os.path.join(to_folder, r'asiair_import.csv'), sep=';', index=False)
+        file_list = get_file_list(dst_folder, row['NEWFOLD'])
+        for file in file_list:
+            update_fits_fields()
 
 
-def import_file():
-    pass
 
 
 if __name__ == '__main__':
     ####################################################################################################################
     dest_folder = os.path.normpath(r'D:\AstroProjects')
     asiar_folder = os.path.normpath(r'D:\Asiair')
-    initialize_folders(dest_folder)
-    create_fits_import_list(asiar_folder, dest_folder)
+    # initialize_folders(dest_folder)
+    # create_fits_import_list(asiar_folder, dest_folder)
+    # import_fits(asiar_folder, dest_folder, 'asiair_imported_files.csv')
+    # apply_corrections(dest_folder, 'changes.csv')
     ####################################################################################################################
 
     ####################################################################################################################
@@ -249,10 +281,13 @@ if __name__ == '__main__':
     #                           fits_df['SET-TEMP'].astype('float').astype(str) + 'C')
     #
     # print(len(fits_df['flat_folder'][(fits_df['IMAGETYP'] == 'Flat') & (fits_df['FILTER'] == 'Unk')].unique()))
-    # fits_df[['ASIAIRFILE', 'flat_folder', 'FILTER']][fits_df['IMAGETYP'] == 'Flat'].to_csv(r'..\out\flats.csv',
+    # fits_df[['ASIFILE', 'flat_folder', 'FILTER']][fits_df['IMAGETYP'] == 'Flat'].to_csv(r'..\out\flats.csv',
     #                                                                                       sep=';', index=False)
     ####################################################################################################################
 
     ####################################################################################################################
     # apply_corrections()
     ####################################################################################################################
+
+    fo = r'D:\AstroProjects\Lights\light_GAIA2192287033139966848_20240731_05_600000.0ms_Bin1_294MC_LUlt_gain120_-10.0C'
+    print(get_fields_from_foldername(fo))

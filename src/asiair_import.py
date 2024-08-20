@@ -81,9 +81,9 @@ def update_fits_fields(filename: str, new_data: dict) -> None:
 
 
 def initialize_folders(from_folder: str) -> None:
-    darks = os.path.join(from_folder, os.path.normpath(r'Darks/sources'))
-    flats = os.path.join(from_folder, os.path.normpath(r'Flats/sources'))
-    lights = os.path.join(from_folder, os.path.normpath(r'Lights'))
+    darks = os.path.join(from_folder, os.path.normpath(r'sources/darks'))
+    flats = os.path.join(from_folder, os.path.normpath(r'sources/flats'))
+    lights = os.path.join(from_folder, os.path.normpath(r'sources/lights'))
 
     if not os.path.isdir(darks):
         mkdir(darks)
@@ -236,7 +236,7 @@ def create_fits_import_list(from_folder: str, to_folder: str) -> None:
 
 
 def import_fits(from_folder: str, to_folder: str, import_file: str = 'asiair_imported_files.csv') -> None:
-    sub_folders = {'Dark': r'Darks\sources', 'Flat': r'Flats\sources', 'Light': r'Lights'}
+    sub_folders = {'Dark': r'sources\darks', 'Flat': r'sources\flats', 'Light': r'sources/lights'}
     df_import = pd.read_csv(os.path.join(to_folder, import_file), sep=';', na_values=['NaN'], keep_default_na=False)
 
     flog = open(os.path.join(to_folder, 'moved.log'), 'w')
@@ -260,7 +260,7 @@ def import_fits(from_folder: str, to_folder: str, import_file: str = 'asiair_imp
 
 
 def apply_corrections(in_folder: str, corrections_file: str) -> None:
-    sub_folders = {'Dark': r'Darks\sources', 'Flat': r'Flats\sources', 'Light': r'Lights'}
+    sub_folders = {'Dark': r'sources\darks', 'Flat': r'sources\flats', 'Light': r'sources/lights'}
     df_corrections = pd.read_csv(os.path.join(in_folder, corrections_file), sep=';', na_values=['NaN'],
                             keep_default_na=False)
 

@@ -36,9 +36,20 @@ def get_fields_from_fits(filename: str) -> dict:
             try:
                 out[field] = header[field]
             except KeyError:
-                out[field] = ''
+                if field == 'SET-TEMP':
+                    out[field] = -99.0
+                else:
+                    out[field] = ''
 
     return out
+
+
+def update_fits_fields(filename: str, new_data: dict) -> None:
+    with fits.open(filename) as fits_file:
+        header = fits_file[0].header
+        for field in list(new_data.keys()):
+            header[field] = new_data[field]
+        fits_file.flush()
 
 
 def initialize_folders(from_folder: str) -> None:
@@ -88,31 +99,29 @@ def is_astrofile(filename: str) -> bool:
 
 def create_foldername(d: dict) -> str:
     if d['IMAGETYP'] == 'Dark':
-        return (d['IMAGETYP'].str.lower() + '_' + d['SESSION'].astype(str) + '_' +
-                d['SEQUENCE'].apply(lambda x: '{:0>2d}'.format(x)) + '_' +
-                d['EXPOSURE'].apply(lambda x: '{:0>8.1f}'.format(1000.0 * x)) + 'ms' + '_' + 'Bin' +
-                d['XBINNING'].astype(str) + '_' + d['INSTRUME'].str[7:12] + '_' + 'gain' + d['GAIN'].astype('str') +
-                '_' + d['SET-TEMP'].astype('float').astype(str) + 'C')
+        return (d['IMAGETYP'].lower() + '_' + '{:0>8d}'.format(int(d['SESSION'])) + '_' +
+                '{:0>2d}'.format(int(d['SEQUENCE'])) + '_' + '{:0>8.1f}'.format(1000.0 * d['EXPOSURE']) + 'ms' + '_' +
+                'Bin' + str(d['XBINNING']) + '_' + d['INSTRUME'][7:12] + '_' + 'gain' + str(d['GAIN']) + '_' +
+                str(float(d['SET-TEMP'])) + 'C')
+
     elif d['IMAGETYP'] == 'Flat':
-        return (d['IMAGETYP'].str.lower() + '_' + d['SESSION'].astype(str) + '_' +
-                d['SEQUENCE'].apply(lambda x: '{:0>2d}'.format(x)) + '_' +
-                d['EXPOSURE'].apply(lambda x: '{:0>8.1f}'.format(1000.0 * x)) + 'ms' + '_' + 'Bin' +
-                d['XBINNING'].astype(str) + '_' + d['INSTRUME'].str[7:12] + '_' + d['FILTER'].str.replace(' ', '') +
-                '_' + 'gain' + d['GAIN'].astype('str') + '_' + d['SET-TEMP'].astype('float').astype(str) + 'C')
+        return (d['IMAGETYP'].lower() + '_' + '{:0>8d}'.format(int(d['SESSION'])) + '_' +
+                '{:0>2d}'.format(int(d['SEQUENCE'])) + '_' + '{:0>8.1f}'.format(1000.0 * d['EXPOSURE']) + 'ms' + '_' +
+                'Bin' + str(d['XBINNING']) + '_' + d['INSTRUME'][7:12] + '_' + d['FILTER'].replace(' ', '') + '_' +
+                'gain' + str(d['GAIN']) + '_' + str(float(d['SET-TEMP'])) + 'C')
     elif d['IMAGETYP'] == 'Light':
-        return (d['IMAGETYP'].str.lower() + '_' + d['OBJECT'] + '_' + d['SESSION'].astype(str) + '_' +
-                d['SEQUENCE'].apply(lambda x: '{:0>2d}'.format(x)) + '_' +
-                d['EXPOSURE'].apply(lambda x: '{:0>8.1f}'.format(1000.0 * x)) + 'ms' + '_' + 'Bin' +
-                d['XBINNING'].astype(str) + '_' + d['INSTRUME'].str[7:12] + '_' + d['FILTER'].str.replace(' ', '') +
-                '_' + 'gain' + d['GAIN'].astype('str') + '_' + d['SET-TEMP'].astype('float').astype(str) + 'C')
+        return (d['IMAGETYP'].lower() + '_' + d['OBJECT'].replace(' ', '') + '_' + '{:0>8d}'.format(int(d['SESSION'])) +
+                '_' + '{:0>2d}'.format(int(d['SEQUENCE'])) + '_' + '{:0>8.1f}'.format(1000.0 * d['EXPOSURE']) + 'ms' +
+                '_' + 'Bin' + str(d['XBINNING']) + '_' + d['INSTRUME'][7:12] + '_' + d['FILTER'].replace(' ', '') +
+                '_' + 'gain' + str(d['GAIN']) + '_' + str(float(d['SET-TEMP'])) + 'C')
 
 
 def create_filename(d: dict) -> str:
     out = create_foldername(d)
-    return out + '_' + d['FRAME'].apply(lambda x: '{:0>5d}'.format(x)) + '.fit'
+    return out + '_' + '{:0>5d}'.format(d['FRAME']) + '.fit'
 
 
-def make_import_list(from_folder: str, to_folder: str) -> None:
+def create_fits_import_list(from_folder: str, to_folder: str) -> None:
     folders = [x[0] for x in os.walk(from_folder)]
     filename_list = [x[2] for x in os.walk(from_folder)]
 
@@ -136,11 +145,15 @@ def make_import_list(from_folder: str, to_folder: str) -> None:
 
             if is_astrofile(filename) and os.path.getsize(os.path.join(folder, filename)) != 0:
                 data = get_fields_from_fits(os.path.join(from_folder, original_file))
+                try:
+                    frame_num = int(filename[:-4].split('_')[-1])
+                except ValueError:
+                    continue
 
                 data = update_dict(data, {'ASIAIRFILE': original_file,
                                           'OBSERVER': 'Luis Pedro Vicente Matilla', 'MOUNT': 'ZWO AM5',
                                           'SITENAME': 'Otero de Bodas, Spain', 'SITELAT': '41 56 17 N',
-                                          'SITELON': '06 09 03 W', 'FRAME': filename[:-4].split('_')[-1]})
+                                          'SITELON': '06 09 03 W', 'FRAME': frame_num})
 
                 try:
                     dt = datetime.strptime(data['DATE-OBS'], '%Y-%m-%dT%H:%M:%S.%f')
@@ -160,30 +173,30 @@ def make_import_list(from_folder: str, to_folder: str) -> None:
                     data = update_dict(data, {'FOCALLEN': '', 'TELESCOP': '', 'GUIDECAM': '', 'FILTER': '',
                                               'MOUNT': '', 'SITENAME': '', 'SITELAT': '', 'SITELON': ''})
                 elif data['IMAGETYP'] == 'Flat':
-                    flat_data = {'TELESCOP': get_telescope(data['FOCALLEN']), 'LENS': get_lens(data['FOCALLEN']), 'GUIDECAM': '', 'FILTER': 'Unk' if data['FILTER'] == '' else data['FILTER'], 'MOUNT': '', 'SITENAME': '', 'SITELAT': '', 'SITELON': ''}
-                    for k, v in flat_data:
-                        data[k] = v
+                    data = update_dict(data, {'TELESCOP': get_telescope(data['FOCALLEN']),
+                                              'LENS': get_lens(data['FOCALLEN']), 'GUIDECAM': '',
+                                              'FILTER': 'Unk' if data['FILTER'] == '' else data['FILTER'], 'MOUNT': '',
+                                              'SITENAME': '', 'SITELAT': '', 'SITELON': ''})
                 elif data['IMAGETYP'] == 'Light':
-                    light_data = {'TELESCOP': get_telescope(data['FOCALLEN']), 'LENS': get_lens(data['FOCALLEN']),
-                                  'OBJECT': filename.split('_')[1],
-                                  'FILTER': 'Unk' if data['FILTER'] == '' else data['FILTER']}
-
-                data['NEWFOLDER'] = create_foldername(data)
-                data['NEWFILENAME'] = create_filename(data)
+                    data = update_dict(data, {'TELESCOP': get_telescope(data['FOCALLEN']),
+                                              'LENS': get_lens(data['FOCALLEN']), 'OBJECT': filename.split('_')[1],
+                                              'FILTER': 'Unk' if data['FILTER'] == '' else data['FILTER']})
 
                 db.append(data)
-                print(counter)
                 counter = counter + 1
 
     sorted_db = sorted(db, key=lambda d: d['DATE-OBS'])
     sorted_db[0]['SEQUENCE'] = 1
     seq = 1
     for i in range(1, len(sorted_db)):
+        print(i, sorted_db[i]['ASIAIRFILE'])
         if sorted_db[i]['SESSION'] != sorted_db[i - 1]['SESSION']:
             seq = 1
         elif sorted_db[i]['FRAME'] <= sorted_db[i - 1]['FRAME']:
             seq = seq + 1
         sorted_db[i]['SEQUENCE'] = seq
+        sorted_db[i]['NEWFOLDER'] = create_foldername(sorted_db[i])
+        sorted_db[i]['NEWFILENAME'] = create_filename(sorted_db[i])
 
     df = pd.DataFrame(db)
     df = df[fields_ordered]
@@ -223,11 +236,7 @@ if __name__ == '__main__':
     dest_folder = os.path.normpath(r'D:\AstroProjects')
     asiar_folder = os.path.normpath(r'D:\Asiair')
     initialize_folders(dest_folder)
-    ####################################################################################################################
-
-    ####################################################################################################################
-
-    make_import_list(asiar_folder, dest_folder)
+    create_fits_import_list(asiar_folder, dest_folder)
     ####################################################################################################################
 
     ####################################################################################################################

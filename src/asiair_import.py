@@ -30,10 +30,18 @@ def get_fields_from_foldername(foldername: str) -> dict:
     out['IMAGETYP'] = fields[0].title()
 
     if out['IMAGETYP'] == 'Dark':
+        if fields[5] == '294MC':
+            fields[5] = 'ZWO ASI294MC Pro'
+        elif fields[5] == '174MM':
+            fields[5] = 'ZWO ASI174MM Mini'
         out = {**out, 'SESSION': int(fields[1]), 'SEQUENCE': int(fields[2]), 'EXPOSURE': float(fields[3][:-2]) / 1000.,
                'XBINNING': int(fields[4][3:]), 'INSTRUME': fields[5], 'GAIN': int(fields[6][4:]),
                'SET-TEMP': float(fields[7][:-1])}
     elif out['IMAGETYP'] == 'Flat':
+        if fields[5] == '294MC':
+            fields[5] = 'ZWO ASI294MC Pro'
+        elif fields[5] == '174MM':
+            fields[5] = 'ZWO ASI174MM Mini'
         out = {**out, 'SESSION': int(fields[1]), 'SEQUENCE': int(fields[2]),
                'EXPOSURE': float(fields[3][:-2]) / 1000., 'XBINNING': int(fields[4][3:]), 'INSTRUME': fields[5],
                'FILTER': fields[6], 'GAIN': int(fields[7][4:]), 'SET-TEMP': float(fields[8][:-1])}
@@ -264,10 +272,20 @@ def apply_corrections(in_folder: str, corrections_file: str) -> None:
             continue
 
         file_list = get_file_list(dst_folder, row['NEWFOLD'])
+        changed_fields = row.to_dict()
+        for k in list(changed_fields.keys()):
+            if changed_fields[k] == '':
+                del changed_fields[k]
+        new_fields = {**get_fields_from_foldername(dst_folder), **changed_fields}
+        new_fields['NEWFOLD'] = create_foldername(new_fields)
+
         for file in file_list:
-            update_fits_fields()
-
-
+            file_fields = get_fields_from_fits(file)
+            new_fields['FRAME'] = file_fields['FRAME']
+            new_fields['NEWFILE'] = create_filename(new_fields)
+            update_fits_fields(file, new_fields)
+            move_file(file, os.path.join(dst_folder, new_fields['NEWFILE']))
+        os.rename(dst_folder, os.path.join(in_folder, sub_folders[img_type], new_fields['NEWFOLD']))
 
 
 if __name__ == '__main__':
@@ -277,7 +295,7 @@ if __name__ == '__main__':
     # initialize_folders(dest_folder)
     # create_fits_import_list(asiar_folder, dest_folder)
     # import_fits(asiar_folder, dest_folder, 'asiair_imported_files.csv')
-    # apply_corrections(dest_folder, 'changes.csv')
+    apply_corrections(dest_folder, 'changes.csv')
     ####################################################################################################################
 
     ####################################################################################################################
@@ -298,5 +316,5 @@ if __name__ == '__main__':
     # apply_corrections()
     ####################################################################################################################
 
-    fo = r'D:\AstroProjects\Lights\light_GAIA2192287033139966848_20240731_05_600000.0ms_Bin1_294MC_LUlt_gain120_-10.0C'
-    print(get_fields_from_foldername(fo))
+    # fo = r'D:\AstroProjects\Lights\light_GAIA2192287033139966848_20240731_05_600000.0ms_Bin1_294MC_LUlt_gain120_-10.0C'
+    # print(get_fields_from_foldername(fo))

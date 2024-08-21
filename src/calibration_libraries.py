@@ -100,8 +100,6 @@ def create_master_files(from_folder: str, image_type: str, siril_version: str = 
 
             subprocess.run('siril-cli -d ' + folder_path + ' -s ' +
                            os.path.join(folder_path, 'create_master_' + image_type + '.ssf'))
-            if clean:
-                clean_dir(folder_path, prefix='pp_', ext='.fit')
         elif nb_files == 1:
             if image_type == 'darks':
                 in_file = os.path.join(folder_path, file_list[0])
@@ -123,10 +121,13 @@ def create_master_files(from_folder: str, image_type: str, siril_version: str = 
                         continue
                     rel_master_dark = os.path.relpath(master_dark, os.path.join(src_root, folder))
                     script_content = script_content.replace('{{master_bias}}', rel_master_dark)
-                f_ssf.write(script_content)
-
+                    f_ssf.write(script_content)
+                subprocess.run('siril-cli -d ' + folder_path + ' -s ' +
+                               os.path.join(folder_path, 'create_master_' + image_type + '.ssf'))
             else:
                 continue
+        if clean:
+            clean_dir(folder_path, prefix='pp_', ext='.fit')
 
 
 if __name__ == '__main__':

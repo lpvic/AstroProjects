@@ -183,14 +183,12 @@ def create_master_files(from_folder: str, image_type: str, siril_version: str = 
         im['image'] = conv_table[im['image']]
         stats[im['image']] = {k.upper(): v for k, v in im.items()}
         stats[im['image']].pop('IMAGE')
-        print(stats)
 
     for k, v in stats.items():
         update_fits_fields(os.path.join(from_folder, out_root[image_type], k), v)
 
     df = pd.DataFrame.from_dict(stats, orient='index')
     df.index.name = 'IMAGE'
-    print(df)
     df.to_csv(os.path.join(from_folder, out_root[image_type], 'stats_master_' + image_type + '.csv'), sep=';')
 
     clean_dir(os.path.join(from_folder, out_root[image_type]), prefix='stats_', ext='.fit')

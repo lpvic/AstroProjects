@@ -1,9 +1,16 @@
 import os
 import subprocess
 
+import pandas as pd
+
 from ioutils import get_file_list, get_list_dir, clean_dir, copy_file
-from asiair_import import get_fields_from_foldername, create_foldername
+from asiair_import import get_fields_from_foldername, create_foldername, update_fits_fields
 from exceptions import NoSuitableDarkAvailable
+
+pd.set_option('display.max_rows', None)
+pd.set_option('display.max_columns', None)
+pd.set_option('display.width', None)
+pd.set_option('display.max_colwidth', None)
 
 
 def get_nearest_exposure(value: float, exposures: set) -> float:
@@ -62,7 +69,7 @@ def create_master_files(from_folder: str, image_type: str, siril_version: str = 
     src_root = os.path.join(from_folder, img_type_folder[image_type])
     src_folders = [x[1] for x in os.walk(src_root)][0]
     out_root = {'dark': r'masters\darks', 'flat': r'masters\flats'}
-    c = 1
+
     for folder in src_folders:
         folder_path = os.path.join(src_root, folder)
         file_list = get_file_list(folder_path, folder)
@@ -70,7 +77,6 @@ def create_master_files(from_folder: str, image_type: str, siril_version: str = 
         if (os.path.exists(os.path.join(from_folder, out_root[image_type], 'master_' + folder + '.fit')) and
                 not force):
             continue
-
 
         with open(r'..\templates\sequence_template.seq', 'r') as f_seq_template:
             seq_template = f_seq_template.read()
@@ -104,6 +110,9 @@ def create_master_files(from_folder: str, image_type: str, siril_version: str = 
 
             subprocess.run('siril-cli -d ' + folder_path + ' -s ' +
                            os.path.join(folder_path, 'create_master_' + image_type + '.ssf'))
+            if os.path.exists(out_file):
+                update_fits_fields(out_file, get_fields_from_foldername(folder))
+
         elif nb_files == 1:
             if image_type == 'dark':
                 in_file = os.path.join(folder_path, file_list[0])
@@ -117,9 +126,9 @@ def create_master_files(from_folder: str, image_type: str, siril_version: str = 
                 subprocess.run('siril-cli -d ' + folder_path + ' -s ' +
                                os.path.join(folder_path, 'sequence_stats.ssf'))
                 copy_file(in_file, out_file)
+                if os.path.exists(out_file):
+                    update_fits_fields(out_file, get_fields_from_foldername(folder))
             elif image_type == 'flat':
-                print(c, os.path.join(from_folder, out_root[image_type], 'master_' + folder + '.fit'))
-                c = c + 1
                 in_file = os.path.join(folder_path, 'pp_' + os.path.basename(file_list[0]))
                 out_file = os.path.join(from_folder, out_root[image_type], 'master_' + folder + '.fit')
                 with open(r'..\templates\calibrate_single_file_template.ssf', 'r') as f_script_template:
@@ -138,23 +147,57 @@ def create_master_files(from_folder: str, image_type: str, siril_version: str = 
                 subprocess.run('siril-cli -d ' + folder_path + ' -s ' +
                                os.path.join(folder_path, 'create_master_' + image_type + '.ssf'))
 
-                print(in_file, out_file)
                 copy_file(in_file, out_file)
+                if os.path.exists(out_file):
+                    update_fits_fields(out_file, get_fields_from_foldername(folder))
             else:
                 continue
-
-        # TODO: standardize stats files
 
         if clean:
             clean_dir(folder_path, prefix='pp_', ext='.fit')
 
-    # TODO: obtain stats for master files
+    with open(r'..\templates\master_stats_template.ssf', 'r') as f_script_template:
+        master_template = f_script_template.read()
+    with open(os.path.join(from_folder, out_root[image_type], 'stats_master_' + image_type + '.ssf'),
+              'w') as f_ssf:
+        script_content = master_template.replace('{{siril_version}}', siril_version)
+        script_content = script_content.replace('{{img_type}}', image_type)
+        f_ssf.write(script_content)
+    subprocess.run('siril-cli -d ' + os.path.join(from_folder, out_root[image_type]) + ' -s ' +
+                   os.path.join(from_folder, out_root[image_type], 'stats_master_' + image_type + '.ssf'))
 
-    # TODO: compile all stats
+    with open(os.path.join(from_folder, out_root[image_type],
+                           'stats_master_' + image_type + '_conversion.txt'), 'r') as f_conv:
+        conversion_file_content = f_conv.readlines()
+
+    conv_table = {}
+    for row in conversion_file_content:
+        fields = row.split(' -> ')
+        conv_table[int(fields[1][19:-6])] = os.path.basename(fields[0][1:-1])
+
+    df = pd.read_csv(os.path.join(from_folder, out_root[image_type], 'stats_master_' + image_type +
+                                  '.csv'), sep='\t').to_dict('records')
+
+    stats = {}
+    for im in df:
+        im['image'] = conv_table[im['image']]
+        stats[im['image']] = {k.upper(): v for k, v in im.items()}
+        stats[im['image']].pop('IMAGE')
+        print(stats)
+
+    for k, v in stats.items():
+        update_fits_fields(os.path.join(from_folder, out_root[image_type], k), v)
+
+    df = pd.DataFrame.from_dict(stats, orient='index')
+    df.index.name = 'IMAGE'
+    print(df)
+    df.to_csv(os.path.join(from_folder, out_root[image_type], 'stats_master_' + image_type + '.csv'), sep=';')
+
+    clean_dir(os.path.join(from_folder, out_root[image_type]), prefix='stats_', ext='.fit')
 
 
 if __name__ == '__main__':
     start_folder = os.path.normpath(r'D:\AstroProjects')
 
-    # create_master_files(start_folder, 'dark')
+    create_master_files(start_folder, 'dark')
     create_master_files(start_folder, 'flat')

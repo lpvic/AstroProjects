@@ -1,0 +1,3 @@
+requires {{siril_version}}
+
+convert master_stats

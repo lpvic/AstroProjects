@@ -1,4 +1,3 @@
 requires {{siril_version}}
 
-stack {{sequence}}_ rej 3 3 -nonorm -out={{out_file}}
 seqstat {{sequence}}_ stats_{{sequence}}.csv full

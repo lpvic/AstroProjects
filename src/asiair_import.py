@@ -84,6 +84,9 @@ def initialize_folders(from_folder: str) -> None:
     darks = os.path.join(from_folder, os.path.normpath(r'sources/darks'))
     flats = os.path.join(from_folder, os.path.normpath(r'sources/flats'))
     lights = os.path.join(from_folder, os.path.normpath(r'sources/lights'))
+    master_darks = os.path.join(from_folder, os.path.normpath(r'masters/darks'))
+    master_flats = os.path.join(from_folder, os.path.normpath(r'masters/flats'))
+    projects = os.path.join(from_folder, os.path.normpath(r'projects'))
 
     if not os.path.isdir(darks):
         mkdir(darks)
@@ -91,6 +94,13 @@ def initialize_folders(from_folder: str) -> None:
         mkdir(flats)
     if not os.path.isdir(lights):
         mkdir(lights)
+    if not os.path.isdir(master_darks):
+        mkdir(master_darks)
+    if not os.path.isdir(master_flats):
+        mkdir(master_flats)
+    if not os.path.isdir(projects):
+        mkdir(projects)
+
 
 
 def get_between(value: int, intervals: tuple) -> int:

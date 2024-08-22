@@ -3,7 +3,7 @@ import subprocess
 
 import pandas as pd
 
-from ioutils import get_file_list, get_list_dir, clean_dir, copy_file
+from io_utils import get_file_list, get_list_dir, clean_dir, cp
 from asiair_import import get_fields_from_foldername, create_foldername, update_fits_fields
 from exceptions import NoSuitableDarkAvailable
 
@@ -125,7 +125,7 @@ def create_master_files(from_folder: str, image_type: str, siril_version: str = 
                     f_ssf.write(script_content)
                 subprocess.run('siril-cli -d ' + folder_path + ' -s ' +
                                os.path.join(folder_path, 'sequence_stats.ssf'))
-                copy_file(in_file, out_file)
+                cp(in_file, out_file)
                 if os.path.exists(out_file):
                     update_fits_fields(out_file, get_fields_from_foldername(folder))
             elif image_type == 'flat':
@@ -147,7 +147,7 @@ def create_master_files(from_folder: str, image_type: str, siril_version: str = 
                 subprocess.run('siril-cli -d ' + folder_path + ' -s ' +
                                os.path.join(folder_path, 'create_master_' + image_type + '.ssf'))
 
-                copy_file(in_file, out_file)
+                cp(in_file, out_file)
                 if os.path.exists(out_file):
                     update_fits_fields(out_file, get_fields_from_foldername(folder))
             else:
@@ -192,10 +192,3 @@ def create_master_files(from_folder: str, image_type: str, siril_version: str = 
     df.to_csv(os.path.join(from_folder, out_root[image_type], 'stats_master_' + image_type + '.csv'), sep=';')
 
     clean_dir(os.path.join(from_folder, out_root[image_type]), prefix='stats_', ext='.fit')
-
-
-if __name__ == '__main__':
-    start_folder = os.path.normpath(r'D:\AstroProjects')
-
-    create_master_files(start_folder, 'dark')
-    create_master_files(start_folder, 'flat')

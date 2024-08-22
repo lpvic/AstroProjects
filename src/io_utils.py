@@ -10,11 +10,11 @@ def mkdir(path: str) -> bool:
         return False
 
 
-def copy_file(src: str, dst: str) -> None:
+def cp(src: str, dst: str) -> None:
     __file_operation(src, dst, shutil.copy2)
 
 
-def move_file(src: str, dst: str) -> None:
+def mv(src: str, dst: str) -> None:
     __file_operation(src, dst, shutil.move)
 
 
@@ -22,7 +22,7 @@ def copy_dir(src: str, dst: str) -> None:
     fl = os.listdir(src)
     for f in fl:
         if os.path.isfile(os.path.join(src, f)):
-            copy_file(os.path.join(src, f), os.path.join(dst, f))
+            cp(os.path.join(src, f), os.path.join(dst, f))
 
 
 def clean_dir(src: str, prefix: str = '', ext: str = '') -> None:
@@ -36,7 +36,7 @@ def clean_dir(src: str, prefix: str = '', ext: str = '') -> None:
 def renumber(filelist: str, basename: str, startindex: int = 1) -> None:
     idx = startindex
     for f in filelist:
-        move_file(f, os.path.join(os.path.dirname(f), (basename + '_{:0>5d}.' + f.split('.')[-1]).format(idx)))
+        mv(f, os.path.join(os.path.dirname(f), (basename + '_{:0>5d}.' + f.split('.')[-1]).format(idx)))
         idx += 1
 
 

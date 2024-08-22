@@ -3,9 +3,9 @@ from datetime import datetime, timedelta
 from dateutil import tz
 
 import pandas as pd
-from astropy.io import fits
 
-from ioutils import mkdir, move_file, get_file_list
+from io_utils import mkdir, mv, get_file_list
+from fits_utils import update_fits_fields, get_fields_from_fits
 
 
 pd.set_option('display.max_rows', None)
@@ -57,29 +57,6 @@ def get_fields_from_foldername(foldername: str) -> dict:
     return out
 
 
-def get_fields_from_fits(filename: str) -> dict:
-    out = {}
-    with fits.open(filename) as fits_file:
-        header = fits_file[0].header
-        for field in fields_ordered:
-            try:
-                out[field] = header[field]
-            except KeyError:
-                if field == 'SET-TEMP':
-                    out[field] = -99.0
-                else:
-                    out[field] = ''
-
-    return out
-
-
-def update_fits_fields(filename: str, new_data: dict) -> None:
-    with fits.open(filename, mode='update') as fits_file:
-        header = fits_file[0].header
-        for field in list(new_data.keys()):
-            header[field] = new_data[field]
-
-
 def initialize_folders(from_folder: str) -> None:
     darks = os.path.join(from_folder, os.path.normpath(r'sources/darks'))
     flats = os.path.join(from_folder, os.path.normpath(r'sources/flats'))
@@ -100,7 +77,6 @@ def initialize_folders(from_folder: str) -> None:
         mkdir(master_flats)
     if not os.path.isdir(projects):
         mkdir(projects)
-
 
 
 def get_between(value: int, intervals: tuple) -> int:
@@ -184,7 +160,7 @@ def create_fits_import_list(from_folder: str, to_folder: str) -> None:
                     continue
 
             if is_astrofile(filename) and os.path.getsize(os.path.join(folder, filename)) != 0:
-                data = get_fields_from_fits(os.path.join(from_folder, original_file))
+                data = get_fields_from_fits(os.path.join(from_folder, original_file), fields_ordered)
                 try:
                     frame_num = int(filename[:-4].split('_')[-1])
                 except ValueError:
@@ -263,7 +239,7 @@ def import_fits(from_folder: str, to_folder: str, import_file: str = 'asiair_imp
             mkdir(dst_folder)
 
         if not os.path.exists(dst_file):
-            move_file(src_file, dst_file)
+            mv(src_file, dst_file)
             update_fits_fields(dst_file, row.to_dict())
             flog.write(src_file + ' -> ' + dst_file + '\n')
     flog.close()
@@ -290,41 +266,9 @@ def apply_corrections(in_folder: str, corrections_file: str) -> None:
         new_fields['NEWFOLD'] = create_foldername(new_fields)
 
         for file in file_list:
-            file_fields = get_fields_from_fits(file)
+            file_fields = get_fields_from_fits(file, fields_ordered)
             new_fields['FRAME'] = file_fields['FRAME']
             new_fields['NEWFILE'] = create_filename(new_fields)
             update_fits_fields(file, new_fields)
-            move_file(file, os.path.join(dst_folder, new_fields['NEWFILE']))
+            mv(file, os.path.join(dst_folder, new_fields['NEWFILE']))
         os.rename(dst_folder, os.path.join(in_folder, sub_folders[img_type], new_fields['NEWFOLD']))
-
-
-if __name__ == '__main__':
-    ####################################################################################################################
-    dest_folder = os.path.normpath(r'D:\AstroProjects')
-    asiar_folder = os.path.normpath(r'D:\Asiair')
-    # initialize_folders(dest_folder)
-    # create_fits_import_list(asiar_folder, dest_folder)
-    # import_fits(asiar_folder, dest_folder, 'asiair_imported_files.csv')
-    apply_corrections(dest_folder, 'changes.csv')
-    ####################################################################################################################
-
-    ####################################################################################################################
-    # fits_df = pd.read_csv('../out/asiair_raw.csv', sep=';', na_values=['NaN'], keep_default_na=False)
-    # fits_df = fits_df[fits_df['INSTRUME'] == 'ZWO ASI294MC Pro']
-    # fits_df['flat_folder'] = (fits_df['IMAGETYP'].str.lower() + '_' + fits_df['SESSION'].astype(str) + '_' +
-    #                           fits_df['EXPOSURE'].apply(lambda x: '{:0>8.1f}'.format(1000.0 * x)) + 'ms' +
-    #                           '_Bin' + fits_df['XBINNING'].astype(str) + '_' + fits_df['INSTRUME'].str[7:12] + '_' +
-    #                           fits_df['FILTER'].str.replace(' ', '') + '_gain' + fits_df['GAIN'].astype('str') + '_' +
-    #                           fits_df['SET-TEMP'].astype('float').astype(str) + 'C')
-    #
-    # print(len(fits_df['flat_folder'][(fits_df['IMAGETYP'] == 'Flat') & (fits_df['FILTER'] == 'Unk')].unique()))
-    # fits_df[['ASIFILE', 'flat_folder', 'FILTER']][fits_df['IMAGETYP'] == 'Flat'].to_csv(r'..\out\flats.csv',
-    #                                                                                       sep=';', index=False)
-    ####################################################################################################################
-
-    ####################################################################################################################
-    # apply_corrections()
-    ####################################################################################################################
-
-    # fo = r'D:\AstroProjects\Lights\light_GAIA2192287033139966848_20240731_05_600000.0ms_Bin1_294MC_LUlt_gain120_-10.0C'
-    # print(get_fields_from_foldername(fo))

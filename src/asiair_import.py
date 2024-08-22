@@ -1,10 +1,10 @@
-import os
+from pathlib import Path
 from datetime import datetime, timedelta
 from dateutil import tz
 
 import pandas as pd
 
-from io_utils import mkdir, mv, get_file_list
+from io_utils import mv, get_file_list
 from fits_utils import update_fits_fields, get_fields_from_fits
 
 
@@ -24,9 +24,9 @@ def update_dict(source_dict: dict, new_values: dict) -> dict:
     return source_dict
 
 
-def get_fields_from_foldername(foldername: str) -> dict:
+def get_fields_from_foldername(foldername: Path) -> dict:
     out = {}
-    fields = os.path.basename(foldername).split('_')
+    fields = foldername.name.split('_')
     out['IMAGETYP'] = fields[0].title()
 
     if out['IMAGETYP'] == 'Dark':
@@ -57,26 +57,20 @@ def get_fields_from_foldername(foldername: str) -> dict:
     return out
 
 
-def initialize_folders(from_folder: str) -> None:
-    darks = os.path.join(from_folder, os.path.normpath(r'sources/darks'))
-    flats = os.path.join(from_folder, os.path.normpath(r'sources/flats'))
-    lights = os.path.join(from_folder, os.path.normpath(r'sources/lights'))
-    master_darks = os.path.join(from_folder, os.path.normpath(r'masters/darks'))
-    master_flats = os.path.join(from_folder, os.path.normpath(r'masters/flats'))
-    projects = os.path.join(from_folder, os.path.normpath(r'projects'))
+def initialize_folders(from_folder: Path) -> None:
+    darks = from_folder / r'sources/darks'
+    flats = from_folder / r'sources/flats'
+    lights = from_folder / r'sources/lights'
+    master_darks = from_folder / r'masters/darks'
+    master_flats = from_folder / r'masters/flats'
+    projects = from_folder / r'projects'
 
-    if not os.path.isdir(darks):
-        mkdir(darks)
-    if not os.path.isdir(flats):
-        mkdir(flats)
-    if not os.path.isdir(lights):
-        mkdir(lights)
-    if not os.path.isdir(master_darks):
-        mkdir(master_darks)
-    if not os.path.isdir(master_flats):
-        mkdir(master_flats)
-    if not os.path.isdir(projects):
-        mkdir(projects)
+    darks.mkdir(parents=True, exist_ok=True)
+    flats.mkdir()
+    lights.mkdir()
+    master_darks.mkdir()
+    master_flats.mkdir()
+    projects.mkdir()
 
 
 def get_between(value: int, intervals: tuple) -> int:
@@ -135,32 +129,32 @@ def create_filename(d: dict) -> str:
     return out + '_' + '{:0>5d}'.format(d['FRAME']) + '.fit'
 
 
-def create_fits_import_list(from_folder: str, to_folder: str) -> None:
-    folders = [x[0] for x in os.walk(from_folder)]
-    filename_list = [x[2] for x in os.walk(from_folder)]
+def create_fits_import_list(from_folder: Path, to_folder: Path) -> None:
+    folders = [x[0] for x in from_folder.walk(top_down=True)]
+    filename_list = [x[2] for x in from_folder.walk(top_down=True)]
 
     df0 = pd.DataFrame()
-    if os.path.exists(os.path.join(to_folder, r'asiair_imported_files.csv')):
-        df0 = pd.read_csv(os.path.join(to_folder, r'asiair_imported_files.csv'), sep=';', na_values=['NaN'],
+    if (to_folder / r'asiair_imported_files.csv').exists():
+        df0 = pd.read_csv(to_folder / r'asiair_imported_files.csv', sep=';', na_values=['NaN'],
                           keep_default_na=False)
         db = df0.to_dict('records')
     else:
         db = []
 
-    fields = ['IMAGETYP', 'FOCALLEN', 'SET-TEMP', 'XBINNING', 'EXPOSURE', 'DATE-OBS', 'FILTER', 'INSTRUME', 'GUIDECAM',
-              'GAIN', 'TELESCOP', 'OBJECT', 'LENS']
+    # fields = ['IMAGETYP', 'FOCALLEN', 'SET-TEMP', 'XBINNING', 'EXPOSURE', 'DATE-OBS', 'FILTER', 'INSTRUME',
+    #           'GUIDECAM', 'GAIN', 'TELESCOP', 'OBJECT', 'LENS']
 
     counter = 1
     for folder, filenames in zip(folders, filename_list):
         for filename in filenames:
-            original_file = os.path.relpath(os.path.join(folder, filename), from_folder)
+            original_file = (folder / filename).relative_to(from_folder, walk_up=True)
 
             if not df0.empty:
                 if original_file in df0['ASIFILE'].values:
                     continue
 
-            if is_astrofile(filename) and os.path.getsize(os.path.join(folder, filename)) != 0:
-                data = get_fields_from_fits(os.path.join(from_folder, original_file), fields_ordered)
+            if is_astrofile(filename) and (folder / filename).stat().st_size != 0:
+                data = get_fields_from_fits(from_folder / original_file, fields_ordered)
                 try:
                     frame_num = int(filename[:-4].split('_')[-1])
                 except ValueError:
@@ -218,43 +212,42 @@ def create_fits_import_list(from_folder: str, to_folder: str) -> None:
 
     df = pd.DataFrame(sorted_db)
     df = df[fields_ordered]
-    df.to_csv(os.path.join(to_folder, r'asiair_imported_files.csv'), sep=';', index=False)
+    df.to_csv(to_folder / r'asiair_imported_files.csv', sep=';', index=False)
 
 
-def import_fits(from_folder: str, to_folder: str, import_file: str = 'asiair_imported_files.csv') -> None:
+def import_fits(from_folder: Path, to_folder: Path, import_file: str = 'asiair_imported_files.csv') -> None:
     sub_folders = {'Dark': r'sources\darks', 'Flat': r'sources\flats', 'Light': r'sources/lights'}
-    df_import = pd.read_csv(os.path.join(to_folder, import_file), sep=';', na_values=['NaN'], keep_default_na=False)
+    df_import = pd.read_csv(to_folder / import_file, sep=';', na_values=['NaN'], keep_default_na=False)
 
-    flog = open(os.path.join(to_folder, 'moved.log'), 'w')
+    flog = open(to_folder / 'moved.log', 'w')
 
     for idx, row in df_import.iterrows():
-        src_file = os.path.join(from_folder, row['ASIFILE'])
-        dst_folder = os.path.join(to_folder, sub_folders[row['IMAGETYP']], row['NEWFOLD'])
-        dst_file = os.path.join(dst_folder, row['NEWFILE'])
+        src_file = from_folder / row['ASIFILE']
+        dst_folder = to_folder / sub_folders[row['IMAGETYP']] / row['NEWFOLD']
+        dst_file = dst_folder / row['NEWFILE']
 
-        if not os.path.exists(src_file):
+        if not src_file.exists():
             continue
 
-        if not os.path.exists(dst_folder):
-            mkdir(dst_folder)
+        dst_folder.mkdir(parents=True, exist_ok=True)
 
-        if not os.path.exists(dst_file):
+        if not dst_file.exists():
             mv(src_file, dst_file)
             update_fits_fields(dst_file, row.to_dict())
             flog.write(src_file + ' -> ' + dst_file + '\n')
     flog.close()
 
 
-def apply_corrections(in_folder: str, corrections_file: str) -> None:
+def apply_corrections(in_folder: Path, corrections_file: str) -> None:
     sub_folders = {'Dark': r'sources\darks', 'Flat': r'sources\flats', 'Light': r'sources/lights'}
-    df_corrections = pd.read_csv(os.path.join(in_folder, corrections_file), sep=';', na_values=['NaN'],
+    df_corrections = pd.read_csv(in_folder / corrections_file, sep=';', na_values=['NaN'],
                             keep_default_na=False)
 
     for idx, row in df_corrections.iterrows():
         img_type = row['NEWFOLD'].split('_')[0].title()
-        dst_folder = os.path.join(in_folder, sub_folders[img_type], row['NEWFOLD'])
+        dst_folder = in_folder / sub_folders[img_type] / row['NEWFOLD']
 
-        if not os.path.exists(dst_folder):
+        if not dst_folder.exists():
             continue
 
         file_list = get_file_list(dst_folder, row['NEWFOLD'])
@@ -270,5 +263,5 @@ def apply_corrections(in_folder: str, corrections_file: str) -> None:
             new_fields['FRAME'] = file_fields['FRAME']
             new_fields['NEWFILE'] = create_filename(new_fields)
             update_fits_fields(file, new_fields)
-            mv(file, os.path.join(dst_folder, new_fields['NEWFILE']))
-        os.rename(dst_folder, os.path.join(in_folder, sub_folders[img_type], new_fields['NEWFOLD']))
+            mv(file, dst_folder / new_fields['NEWFILE'])
+        dst_folder.rename(in_folder / sub_folders[img_type] / new_fields['NEWFOLD'])

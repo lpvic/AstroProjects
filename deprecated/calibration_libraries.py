@@ -4,7 +4,7 @@ import subprocess
 import pandas as pd
 
 from io_utils import get_file_list, get_list_dir, clean_dir, cp
-from asiair_import import get_fields_from_foldername, create_foldername, update_fits_fields
+from deprecated.asiair_import import get_fields_from_foldername, create_foldername, update_fits_fields
 from exceptions import NoSuitableDarkAvailable
 
 pd.set_option('display.max_rows', None)
@@ -77,7 +77,7 @@ def create_master_files(from_folder: Path, image_type: str, siril_version: str =
         if (from_folder / out_root[image_type] / ('master_' + folder + '.fit')).exists() and not force:
             continue
 
-        with open(r'..\templates\sequence_template.seq', 'r') as f_seq_template:
+        with open(r'../templates/sequence_template.seq', 'r') as f_seq_template:
             seq_template = f_seq_template.read()
         with open(folder_path / folder + '_.seq', 'w') as f_seq:
             seq_content = seq_template.replace('{{sequence_name}}', folder)
@@ -116,7 +116,7 @@ def create_master_files(from_folder: Path, image_type: str, siril_version: str =
             if image_type == 'dark':
                 in_file = folder_path / file_list[0]
                 out_file = from_folder / out_root[image_type] / ('master_' + folder + '.fit')
-                with open(r'..\templates\sequence_stats_template.ssf', 'r') as f_script_template:
+                with open(r'../templates/sequence_stats_template.ssf', 'r') as f_script_template:
                     master_template = f_script_template.read()
                 with open(folder_path / 'sequence_stats.ssf', 'w') as f_ssf:
                     script_content = master_template.replace('{{siril_version}}', siril_version)
@@ -129,7 +129,7 @@ def create_master_files(from_folder: Path, image_type: str, siril_version: str =
             elif image_type == 'flat':
                 in_file = (folder_path / ('pp_' + file_list[0])).name
                 out_file = from_folder / (out_root[image_type], 'master_' + folder + '.fit')
-                with open(r'..\templates\calibrate_single_file_template.ssf', 'r') as f_script_template:
+                with open(r'../templates/calibrate_single_file_template.ssf', 'r') as f_script_template:
                     master_template = f_script_template.read()
                 with open(folder_path / ('create_master_' + image_type + '.ssf'), 'w') as f_ssf:
                     script_content = master_template.replace('{{siril_version}}', siril_version)
@@ -154,7 +154,7 @@ def create_master_files(from_folder: Path, image_type: str, siril_version: str =
         if clean:
             clean_dir(folder_path, prefix='pp_', ext='.fit')
 
-    with open(r'..\templates\master_stats_template.ssf', 'r') as f_script_template:
+    with open(r'../templates/master_stats_template.ssf', 'r') as f_script_template:
         master_template = f_script_template.read()
     with open(from_folder / (out_root[image_type], 'stats_master_' + image_type + '.ssf'), 'w') as f_ssf:
         script_content = master_template.replace('{{siril_version}}', siril_version)

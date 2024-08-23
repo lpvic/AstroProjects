@@ -1,7 +1,8 @@
-import os
+from pathlib import Path
+from src.asiair_import import update_database
 
-dest_folder = os.path.normpath(r'D:\AstroProjects')
-asiar_folder = os.path.normpath(r'D:\Asiair')
+astroprojects_folder = Path(r'D:\AstroProjects')
+asiar_root_folder = Path(r'D:\Asiair')
 
 # initialize_folders(dest_folder)
 # create_fits_import_list(asiar_folder, dest_folder)
@@ -10,3 +11,5 @@ asiar_folder = os.path.normpath(r'D:\Asiair')
 #
 # create_master_files(dest_folder, 'dark')
 # create_master_files(dest_folder, 'flat')
+
+update_database(asiar_root_folder, astroprojects_folder, 'dark')

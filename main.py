@@ -1,8 +1,5 @@
 import os
 
-from src.asiair_import import initialize_folders, create_fits_import_list, import_fits, apply_corrections
-from src.calibration_libraries import create_master_files
-
 dest_folder = os.path.normpath(r'D:\AstroProjects')
 asiar_folder = os.path.normpath(r'D:\Asiair')
 

@@ -6,6 +6,7 @@ import pandas as pd
 
 from io_utils import mv, get_file_list
 from fits_utils import update_fits_fields, get_fields_from_fits
+from gen_utils import update_dict
 
 
 pd.set_option('display.max_rows', None)
@@ -16,12 +17,6 @@ pd.set_option('display.max_colwidth', None)
 fields_ordered = ['ASIFILE', 'IMAGETYP', 'DATE-OBS', 'SESSION', 'SEQUENCE', 'FRAME', 'INSTRUME', 'FILTER',
                   'EXPOSURE', 'XBINNING', 'GAIN', 'SET-TEMP', 'GUIDECAM', 'MOUNT', 'TELESCOP', 'LENS', 'FOCALLEN',
                   'OBJECT', 'OBSERVER',  'SITENAME', 'SITELAT', 'SITELON', 'NEWFOLD', 'NEWFILE']
-
-
-def update_dict(source_dict: dict, new_values: dict) -> dict:
-    for k, v in new_values.items():
-        source_dict[k] = v
-    return source_dict
 
 
 def get_fields_from_foldername(foldername: Path) -> dict:

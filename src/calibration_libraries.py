@@ -35,7 +35,7 @@ def get_nearest_session(value: int, sessions: set) -> int:
     return out
 
 
-def select_master_dark(from_folder: Path, params: dict) -> str:
+def select_master_dark(from_folder: Path, params: dict) -> Path:
     src_darks = from_folder / r'masters\darks'
     darks_list = get_list_dir(src_darks, prefix='master', ext='fit')
     reduced_list = []

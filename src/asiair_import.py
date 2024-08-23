@@ -56,26 +56,28 @@ def update_database(asiair_folder: Path, astroprojects_folder: Path, image_type:
         if (db['ASIFILE'] == rel_file).any():
             continue
         else:
-            print(file)
             data = get_fields_from_fits(file, db_fields[img_type])
-
-            additional_data = {
-                'dark': {'FOCALLEN': 0, 'TELESCOP': '', 'GUIDECAM': '', 'FILTER': '', 'MOUNT': '', 'SITENAME': '',
-                         'SITELAT': '', 'SITELON': ''},
-                'flat': {'TELESCOP': get_telescope(data['FOCALLEN']), 'LENS': get_lens(data['FOCALLEN']),
-                         'GUIDECAM': '', 'FILTER': 'Unk' if data['FILTER'] == '' else data['FILTER'], 'MOUNT': '',
-                         'SITENAME': '', 'SITELAT': '', 'SITELON': ''},
-                'light': {'TELESCOP': get_telescope(data['FOCALLEN']), 'LENS': get_lens(data['FOCALLEN']),
-                          'OBJECT': file.stem.split('_')[1].replace(' ', ''),
-                          'FILTER': 'Unk' if data['FILTER'] == '' else data['FILTER']}
-            }
-
-            data = update_dict(data, additional_data[img_type])
             data = update_dict(data, {
                 'FRAME': int(file.stem.split('_')[-1]),
                 'SESSION': get_session(data['DATE-OBS'], data['EXPTIME'], int(file.stem.split('_')[-1])),
-                'ASIFILE': rel_file, 'OBSERVER': 'Luis Pedro Vicente Matilla', 'MOUNT': 'ZWO AM5',
+                'ASIFILE': str(rel_file), 'OBSERVER': 'Luis Pedro Vicente Matilla', 'MOUNT': 'ZWO AM5',
                 'SITENAME': 'Otero de Bodas, Spain', 'SITELAT': '41 56 17 N', 'SITELON': '06 09 03 W'})
 
+            if img_type == 'dark':
+                additional_data = {'FOCALLEN': 0, 'TELESCOP': '', 'GUIDECAM': '', 'FILTER': '', 'MOUNT': '', 'SITENAME': '',
+                         'SITELAT': '', 'SITELON': ''}
+            elif img_type == 'flat':
+                additional_data = {'TELESCOP': get_telescope(data['FOCALLEN']), 'LENS': get_lens(data['FOCALLEN']),
+                         'GUIDECAM': '', 'FILTER': 'Unk' if data['FILTER'] == '' else data['FILTER'], 'MOUNT': '',
+                         'SITENAME': '', 'SITELAT': '', 'SITELON': ''}
+            elif img_type == 'light':
+                additional_data = {'TELESCOP': get_telescope(data['FOCALLEN']), 'LENS': get_lens(data['FOCALLEN']),
+                          'OBJECT': file.stem.split('_')[1].replace(' ', ''),
+                          'FILTER': 'Unk' if data['FILTER'] == '' else data['FILTER']}
+            else:
+                continue
 
+            data = update_dict(data, additional_data)
+
+            print(file)
             print(data)

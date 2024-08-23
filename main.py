@@ -12,4 +12,4 @@ asiar_root_folder = Path(r'D:\Asiair')
 # create_master_files(dest_folder, 'dark')
 # create_master_files(dest_folder, 'flat')
 
-update_database(asiar_root_folder, astroprojects_folder, 'dark')
+update_database(asiar_root_folder, astroprojects_folder, 'flat')

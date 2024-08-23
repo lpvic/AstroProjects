@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 import shutil
 
 
@@ -10,41 +11,40 @@ def mkdir(path: str) -> bool:
         return False
 
 
-def cp(src: str, dst: str) -> None:
+def cp(src: Path, dst: Path) -> None:
     __file_operation(src, dst, shutil.copy2)
 
 
-def mv(src: str, dst: str) -> None:
+def mv(src: Path, dst: Path) -> None:
     __file_operation(src, dst, shutil.move)
 
 
-def copy_dir(src: str, dst: str) -> None:
-    fl = os.listdir(src)
+def copy_dir(src: Path, dst: Path) -> None:
+    fl = src.glob('*')
     for f in fl:
-        if os.path.isfile(os.path.join(src, f)):
-            cp(os.path.join(src, f), os.path.join(dst, f))
+        if f.is_file():
+            cp(f, dst / f.name)
 
 
-def clean_dir(src: str, prefix: str = '', ext: str = '') -> None:
-    fl = os.listdir(src)
+def clean_dir(src: Path, prefix: str = '', ext: str = '') -> None:
+    fl = src.glob('*')
     for f in fl:
-        file = os.path.join(src, f)
-        if os.path.isfile(file) & f.startswith(prefix) & f.endswith(ext):
-            os.remove(os.path.join(src, f))
+        if f.is_file() & f.name.startswith(prefix) & f.name.endswith(ext):
+            os.remove(f)
 
 
-def renumber(filelist: str, basename: str, startindex: int = 1) -> None:
+def renumber(filelist: list[Path], basename: str, startindex: int = 1) -> None:
     idx = startindex
     for f in filelist:
-        mv(f, os.path.join(os.path.dirname(f), (basename + '_{:0>5d}.' + f.split('.')[-1]).format(idx)))
+        mv(f, f.parent / (basename + '_{:0>5d}.' + f.suffix).format(idx))
         idx += 1
 
 
-def get_file_list(srcdir: str, basename: str) -> list[str]:
+def get_file_list(srcdir: Path, basename: str) -> list[Path]:
     lst = []
     for f in os.listdir(srcdir):
         if f.startswith(basename) and f.endswith('.fit'):
-            lst.append(os.path.join(srcdir, f))
+            lst.append(srcdir / f)
 
     return lst
 
@@ -57,7 +57,7 @@ def get_list_dir(srcdir: str, prefix: str = '', ext: str = '') -> list[str]:
     return file_list
 
 
-def __file_operation(src: str, dst: str, operation: callable):
+def __file_operation(src: Path, dst: Path, operation: callable):
     if isinstance(src, list):
         if isinstance(dst, list):
             if len(src) == len(dst):

@@ -73,7 +73,7 @@ def initialize_folders(from_folder: Path) -> None:
     projects.mkdir()
 
 
-def get_between(value: int, intervals: tuple) -> int:
+def get_between(value: int, intervals: list[tuple[int, int]]) -> tuple[int, int]:
     for i in intervals:
         if (value >= i[0]) and (value <= i[1]):
             return i
@@ -135,8 +135,7 @@ def create_fits_import_list(from_folder: Path, to_folder: Path) -> None:
 
     df0 = pd.DataFrame()
     if (to_folder / r'asiair_imported_files.csv').exists():
-        df0 = pd.read_csv(to_folder / r'asiair_imported_files.csv', sep=';', na_values=['NaN'],
-                          keep_default_na=False)
+        df0 = pd.read_csv(to_folder / r'asiair_imported_files.csv', sep=';', na_values='NaN', keep_default_na=False)
         db = df0.to_dict('records')
     else:
         db = []
@@ -217,7 +216,7 @@ def create_fits_import_list(from_folder: Path, to_folder: Path) -> None:
 
 def import_fits(from_folder: Path, to_folder: Path, import_file: str = 'asiair_imported_files.csv') -> None:
     sub_folders = {'Dark': r'sources\darks', 'Flat': r'sources\flats', 'Light': r'sources/lights'}
-    df_import = pd.read_csv(to_folder / import_file, sep=';', na_values=['NaN'], keep_default_na=False)
+    df_import = pd.read_csv(to_folder / import_file, sep=';', na_values='NaN', keep_default_na=False)
 
     flog = open(to_folder / 'moved.log', 'w')
 
@@ -235,13 +234,13 @@ def import_fits(from_folder: Path, to_folder: Path, import_file: str = 'asiair_i
             mv(src_file, dst_file)
             update_fits_fields(dst_file, row.to_dict())
             flog.write(src_file + ' -> ' + dst_file + '\n')
+
     flog.close()
 
 
 def apply_corrections(in_folder: Path, corrections_file: str) -> None:
     sub_folders = {'Dark': r'sources\darks', 'Flat': r'sources\flats', 'Light': r'sources/lights'}
-    df_corrections = pd.read_csv(in_folder / corrections_file, sep=';', na_values=['NaN'],
-                            keep_default_na=False)
+    df_corrections = pd.read_csv(in_folder / corrections_file, sep=';', na_values='NaN', keep_default_na=False)
 
     for idx, row in df_corrections.iterrows():
         img_type = row['NEWFOLD'].split('_')[0].title()

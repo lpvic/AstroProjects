@@ -4,7 +4,7 @@ from dateutil import tz
 
 import pandas as pd
 
-from src.fits_utils import update_fits_fields, get_fields_from_fits
+from src.fits_utils import update_fits_fields, get_fields_from_fits, get_session
 from src.gen_utils import update_dict, get_between
 from src.database import db_fields
 
@@ -31,7 +31,7 @@ def get_telescope(focal: int) -> str:
              (2000, 3000): 'Celestron EdgeHD 800', (1300, 1600): 'Celestron EdgeHD 800',
              (10, 150): 'Nikon AF-S DX Nikkor 18-140mm f/3.5-5.6G ED VR'}
 
-    return teles[get_between(focal, list(teles.keys()))]
+    return teles[get_between(focal, list(teles.keys()))] if focal > 0 else 0
 
 
 def get_lens(focal: int) -> str:
@@ -52,9 +52,30 @@ def update_database(asiair_folder: Path, astroprojects_folder: Path, image_type:
         db = pd.DataFrame(columns=db_fields[img_type])
 
     for file in asiair_folder.rglob(img_type.title() + '_*.fit'):
-        if (db['ASIFILE'] == file.relative_to(asiair_folder)).any():
-            pass
+        rel_file = file.relative_to(asiair_folder)
+        if (db['ASIFILE'] == rel_file).any():
+            continue
         else:
-            fields = get_fields_from_fits(file, db_fields[img_type])
+            print(file)
+            data = get_fields_from_fits(file, db_fields[img_type])
 
-            print(fields)
+            additional_data = {
+                'dark': {'FOCALLEN': 0, 'TELESCOP': '', 'GUIDECAM': '', 'FILTER': '', 'MOUNT': '', 'SITENAME': '',
+                         'SITELAT': '', 'SITELON': ''},
+                'flat': {'TELESCOP': get_telescope(data['FOCALLEN']), 'LENS': get_lens(data['FOCALLEN']),
+                         'GUIDECAM': '', 'FILTER': 'Unk' if data['FILTER'] == '' else data['FILTER'], 'MOUNT': '',
+                         'SITENAME': '', 'SITELAT': '', 'SITELON': ''},
+                'light': {'TELESCOP': get_telescope(data['FOCALLEN']), 'LENS': get_lens(data['FOCALLEN']),
+                          'OBJECT': file.stem.split('_')[1].replace(' ', ''),
+                          'FILTER': 'Unk' if data['FILTER'] == '' else data['FILTER']}
+            }
+
+            data = update_dict(data, additional_data[img_type])
+            data = update_dict(data, {
+                'FRAME': int(file.stem.split('_')[-1]),
+                'SESSION': get_session(data['DATE-OBS'], data['EXPTIME'], int(file.stem.split('_')[-1])),
+                'ASIFILE': rel_file, 'OBSERVER': 'Luis Pedro Vicente Matilla', 'MOUNT': 'ZWO AM5',
+                'SITENAME': 'Otero de Bodas, Spain', 'SITELAT': '41 56 17 N', 'SITELON': '06 09 03 W'})
+
+
+            print(data)

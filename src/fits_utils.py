@@ -22,6 +22,8 @@ def get_fields_from_fits(file: Path, fields: list) -> dict:
             except KeyError:
                 if field == 'SET-TEMP':
                     out[field] = -99.0
+                if field == 'SEQUENCE':
+                    out[field] = 0
                 else:
                     out[field] = ''
 
@@ -29,17 +31,17 @@ def get_fields_from_fits(file: Path, fields: list) -> dict:
 
 
 def get_foldername(d: dict) -> str:
-    if d['IMAGETYP'].contains('dark'):
+    if 'dark' in d['IMAGETYP']:
         return (d['IMAGETYP'].lower() + '_' + '{:0>8d}'.format(int(d['SESSION'])) + '_' +
                 '{:0>2d}'.format(int(d['SEQUENCE'])) + '_' + '{:0>8.1f}'.format(1000.0 * d['EXPTIME']) + 'ms' + '_' +
                 'bin' + '{:0>1d}'.format(d['XBINNING']) + '_' + d['INSTRUME'][7:12] + '_' + 'g' + '{:0>3d}'.format(d['GAIN']) + '_' +
                 str(float(d['SET-TEMP'])) + 'C')
-    elif d['IMAGETYP'].contains('flat'):
+    elif 'flat' in d['IMAGETYP']:
         return (d['IMAGETYP'].lower() + '_' + '{:0>8d}'.format(int(d['SESSION'])) + '_' +
                 '{:0>2d}'.format(int(d['SEQUENCE'])) + '_' + '{:0>8.1f}'.format(1000.0 * d['EXPTIME']) + 'ms' + '_' +
                 'bin' + '{:0>1d}'.format(d['XBINNING']) + '_' + d['INSTRUME'][7:12] + '_' + d['FILTER'].replace(' ', '') + '_' +
                 'gain' + '{:0>3d}'.format(d['GAIN']) + '_' + str(float(d['SET-TEMP'])) + 'C')
-    elif d['IMAGETYP'].contains('light'):
+    elif 'light' in d['IMAGETYP']:
         return (d['IMAGETYP'].lower() + '_' + d['OBJECT'].replace(' ', '') + '_' + '{:0>8d}'.format(int(d['SESSION'])) +
                 '_' + '{:0>2d}'.format(int(d['SEQUENCE'])) + '_' + '{:0>8.1f}'.format(1000.0 * d['EXPTIME']) + 'ms' +
                 '_' + 'bin' + '{:0>1d}'.format(d['XBINNING']) + '_' + d['INSTRUME'][7:12] + '_' + d['FILTER'].replace(' ', '') +

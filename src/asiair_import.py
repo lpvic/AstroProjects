@@ -16,16 +16,12 @@ pd.set_option('display.max_colwidth', None)
 
 
 def initialize_folders(from_folder: Path) -> None:
-    (from_folder / r'sources/darks').mkdir(parents=True, exist_ok=True)
-    (from_folder / r'sources/flats').mkdir(parents=True, exist_ok=True)
-    (from_folder / r'sources/lights').mkdir(parents=True, exist_ok=True)
-    (from_folder / r'masters/darks').mkdir(parents=True, exist_ok=True)
-    (from_folder / r'masters/flats').mkdir(parents=True, exist_ok=True)
-    (from_folder / r'projects').mkdir(parents=True, exist_ok=True)
+    subdirs = [r'sources/darks', r'sources/flats', r'sources/lights', r'masters/darks', r'masters/flats', r'projects']
+    for sub in subdirs:
+        Path(from_folder / sub).mkdir(parents=True, exist_ok=True)
 
 
 def get_telescope(focal: int) -> str:
-
     teles = {(250, 290): 'Askar V60', (350, 370): 'Askar V60',  (430, 460): 'Askar V60',
              (371, 410): 'Askar V80', (475, 525): 'Askar V80', (570, 630): 'Askar V80',
              (2000, 3000): 'Celestron EdgeHD 800', (1300, 1600): 'Celestron EdgeHD 800',

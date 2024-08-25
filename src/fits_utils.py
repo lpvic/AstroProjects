@@ -12,6 +12,39 @@ def update_fits_fields(file: Path, new_data: dict) -> None:
             header[field] = new_data[field]
 
 
+def get_fields_from_foldername(foldername: Path) -> dict:
+    out = {}
+    fields = foldername.name.split('_')
+    out['IMAGETYP'] = fields[0].title()
+
+    if out['IMAGETYP'] == 'Dark':
+        if fields[5] == '294MC':
+            fields[5] = 'ZWO ASI294MC Pro'
+        elif fields[5] == '174MM':
+            fields[5] = 'ZWO ASI174MM Mini'
+        out = {**out, 'SESSION': int(fields[1]), 'SEQUENCE': int(fields[2]), 'EXPOSURE': float(fields[3][:-2]) / 1000.,
+               'XBINNING': int(fields[4][3:]), 'INSTRUME': fields[5], 'GAIN': int(fields[6][4:]),
+               'SET-TEMP': float(fields[7][:-1])}
+    elif out['IMAGETYP'] == 'Flat':
+        if fields[5] == '294MC':
+            fields[5] = 'ZWO ASI294MC Pro'
+        elif fields[5] == '174MM':
+            fields[5] = 'ZWO ASI174MM Mini'
+        out = {**out, 'SESSION': int(fields[1]), 'SEQUENCE': int(fields[2]),
+               'EXPOSURE': float(fields[3][:-2]) / 1000., 'XBINNING': int(fields[4][3:]), 'INSTRUME': fields[5],
+               'FILTER': fields[6], 'GAIN': int(fields[7][4:]), 'SET-TEMP': float(fields[8][:-1])}
+    elif out['IMAGETYP'] == 'Light':
+        if fields[6] == '294MC':
+            fields[6] = 'ZWO ASI294MC Pro'
+        elif fields[6] == '174MM':
+            fields[6] = 'ZWO ASI174MM Mini'
+        out = {**out, 'OBJECT': fields[1], 'SESSION': int(fields[2]), 'SEQUENCE': int(fields[3]),
+               'EXPOSURE': float(fields[4][:-2]) / 1000., 'XBINNING': int(fields[5][3:]), 'INSTRUME': fields[6],
+               'FILTER': fields[7], 'GAIN': int(fields[8][4:]), 'SET-TEMP': float(fields[9][:-1])}
+
+    return out
+
+
 def get_fields_from_fits(file: Path, fields: list) -> dict:
     out = {}
     with fits.open(file, mode='readonly') as fits_file:

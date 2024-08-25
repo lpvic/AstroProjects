@@ -77,7 +77,7 @@ def read_asiair_files(asiair_folder: Path, astroprojects_folder: Path) -> None:
         db = pd.DataFrame(data, index=[0]) if db.empty else pd.concat([db, pd.DataFrame(data, index=[0])])
         # print(c, data['SET-TEMP'])
         c = c + 1
-    db['SET-TEMP'] = pd.to_numeric(db['SET-TEMP'], errors='coerce')
+    db['SET-TEMP'] = pd.to_numeric(db['SET-TEMP'], errors='coerce').fillna(-99.0)
     db['SESSION'] = db['SESSION'].astype(str)
     db['SEQUENCE'] = db['SEQUENCE'].fillna(0).astype(int)
 
@@ -115,9 +115,13 @@ def read_asiair_files(asiair_folder: Path, astroprojects_folder: Path) -> None:
 def update_metadata(astroprojects_folder: Path) -> None:
     db_path = astroprojects_folder / 'asiair_database.csv'
     updates_path = astroprojects_folder / 'metadata_updates.csv'
-    dest_path = {'dark': r'sources/darks', 'flat': r'sources/flats', 'light': r'sources/lights'}
+    dest_path = {'dark': astroprojects_folder / r'sources/darks', 'flat': astroprojects_folder / r'sources/flats',
+                 'light': astroprojects_folder / r'sources/lights'}
 
     db = pd.read_csv(db_path, sep=';', na_values='NaN', keep_default_na=False)
+    db['SET-TEMP'] = pd.to_numeric(db['SET-TEMP'], errors='coerce').fillna(-99.0)
+    db['SESSION'] = db['SESSION'].astype(str)
+    db['SEQUENCE'] = db['SEQUENCE'].fillna(0).astype(int)
     db['NEWFOLDER'] = db['NEWFILE'].apply(lambda x: str(Path(x).parent))
     db = db.set_index('NEWFOLDER')
 
@@ -129,8 +133,7 @@ def update_metadata(astroprojects_folder: Path) -> None:
             if row[field] != '':
                 db.at[idx, field] = row[field]
 
-        db.at[idx, 'NEWFILE'] = ((astroprojects_folder / dest_path[db.at[idx, 'IMAGETYP']] /
-                                  get_foldername(db.loc[idx].to_dict()) /
-                                  get_filename(db.loc[idx].to_dict()))).relative_to(astroprojects_folder)
-
+    db = db.reset_index()[db_raw_fields]
+    db['NEWFILE'] = [(dest_path[x['IMAGETYP']] / get_foldername(x) / get_filename(x)).relative_to(astroprojects_folder)
+                     for x in db.to_dict(orient='records')]
     db.to_csv(astroprojects_folder / 'asiair_database_2.csv', sep=';', index=False)

@@ -115,11 +115,22 @@ def read_asiair_files(asiair_folder: Path, astroprojects_folder: Path) -> None:
 def update_metadata(astroprojects_folder: Path) -> None:
     db_path = astroprojects_folder / 'asiair_database.csv'
     updates_path = astroprojects_folder / 'metadata_updates.csv'
+    dest_path = {'dark': r'sources/darks', 'flat': r'sources/flats', 'light': r'sources/lights'}
 
     db = pd.read_csv(db_path, sep=';', na_values='NaN', keep_default_na=False)
+    db['NEWFOLDER'] = db['NEWFILE'].apply(lambda x: str(Path(x).parent))
+    db = db.set_index('NEWFOLDER')
+
     updates = pd.read_csv(updates_path, sep=';', na_values='NaN', keep_default_na=False)
+    updates = updates.set_index('NEWFOLDER')
 
     for idx, row in updates.iterrows():
+        for field in row.index:
+            if row[field] != '':
+                db.at[idx, field] = row[field]
 
+        db.at[idx, 'NEWFILE'] = ((astroprojects_folder / dest_path[db.at[idx, 'IMAGETYP']] /
+                                  get_foldername(db.loc[idx].to_dict()) /
+                                  get_filename(db.loc[idx].to_dict()))).relative_to(astroprojects_folder)
 
-
+    db.to_csv(astroprojects_folder / 'asiair_database_2.csv', sep=';', index=False)

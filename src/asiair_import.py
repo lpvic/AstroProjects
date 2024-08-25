@@ -37,8 +37,9 @@ def get_lens(focal: int) -> str:
     return lens[get_between(focal, list(lens.keys()))]
 
 
-def update_database(asiair_folder: Path, astroprojects_folder: Path) -> None:
+def read_asiair_files(asiair_folder: Path, astroprojects_folder: Path) -> None:
     db_path = astroprojects_folder / 'asiair_database.csv'
+    dest_path = {'dark': r'sources/darks', 'flat': r'sources/flats', 'light': r'sources/lights'}
     if db_path.exists():
         db = pd.read_csv(db_path, sep=';', na_values='NaN', keep_default_na=False).drop_duplicates()
     else:
@@ -94,9 +95,31 @@ def update_database(asiair_folder: Path, astroprojects_folder: Path) -> None:
             else:
                 df_sessions.at[row['SESSION'], 'SEQUENCE'] = df_sessions.at[row['SESSION'], 'SEQUENCE']
             db.at[idx, 'SEQUENCE'] = df_sessions.at[row['SESSION'], 'SEQUENCE']
-            db.at[idx, 'NEWFILE'] = ((astroprojects_folder / get_foldername(db.loc[idx].to_dict()) /
+            db.at[idx, 'NEWFILE'] = ((astroprojects_folder / dest_path[db.at[idx, 'IMAGETYP']] /
+                                      get_foldername(db.loc[idx].to_dict()) /
                                       get_filename(db.loc[idx].to_dict()))).relative_to(astroprojects_folder)
 
-    db = db[db_raw_fields]
+    db = db[db_raw_fields].sort_values(['SESSION', 'SEQUENCE', 'FRAME']).reset_index()
+    db['idx'] = pd.RangeIndex(stop=db.shape[0])
+    db = db.set_index('idx')
+
+    for idx, row in db.iterrows():
+        if row['SEQUENCE'] != (db.loc[idx - 1, 'SEQUENCE'] if idx > 0 else 0):
+            db.at[idx, 'FRAME'] = 1
+        else:
+            db.at[idx, 'FRAME'] = db.at[idx - 1, 'FRAME'] + 1
 
     db.to_csv(db_path, sep=';', index=False)
+
+
+def update_metadata(astroprojects_folder: Path) -> None:
+    db_path = astroprojects_folder / 'asiair_database.csv'
+    updates_path = astroprojects_folder / 'metadata_updates.csv'
+
+    db = pd.read_csv(db_path, sep=';', na_values='NaN', keep_default_na=False)
+    updates = pd.read_csv(updates_path, sep=';', na_values='NaN', keep_default_na=False)
+
+    for idx, row in updates.iterrows():
+
+
+

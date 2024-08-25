@@ -54,6 +54,8 @@ def select_master_dark(from_folder: Path, params: dict) -> Path:
 
 def create_sequence(folder_path: Path) -> str:
     file_list = list(folder_path.glob('*.fit'))
+    if not file_list:
+        return ''
     nb_files = len(file_list)
     with open(r'templates/sequence_template.seq', 'r') as f_seq_template:
         seq_template = f_seq_template.read()
@@ -66,6 +68,12 @@ def create_sequence(folder_path: Path) -> str:
             seq_content = seq_content + 'I ' + str(seq_number) + ' 1\n'
         f_seq.write(seq_content)
     return folder_path.name
+
+
+def create_all_sequences(from_folder: Path) -> None:
+    folder_list = [x for x in list(from_folder.rglob('*')) if x.is_dir()]
+    for folder in folder_list:
+        create_sequence(folder)
 
 
 def create_master_file(from_folder: Path, siril_version: str = '1.2.0', force: bool = False, clean: bool = True)\

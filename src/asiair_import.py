@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from src.fits_utils import update_fits_fields, get_fields_from_fits, get_session, get_foldername, get_filename
+from src.fits_utils import update_fits_fields, get_fields_from_fits, get_session, get_raw_filename, get_raw_foldername
 from src.gen_utils import update_dict, get_between, multi_pattern_rglob
 from src.database import db_raw_fields
 
@@ -96,8 +96,8 @@ def read_asiair_files(asiair_folder: Path, astroprojects_folder: Path) -> None:
                 df_sessions.at[row['SESSION'], 'SEQUENCE'] = df_sessions.at[row['SESSION'], 'SEQUENCE']
             db.at[idx, 'SEQUENCE'] = df_sessions.at[row['SESSION'], 'SEQUENCE']
             db.at[idx, 'NEWFILE'] = ((astroprojects_folder / dest_path[db.at[idx, 'IMAGETYP']] /
-                                      get_foldername(db.loc[idx].to_dict()) /
-                                      get_filename(db.loc[idx].to_dict()))).relative_to(astroprojects_folder)
+                                      get_raw_foldername(db.loc[idx].to_dict()) /
+                                      get_raw_filename(db.loc[idx].to_dict()))).relative_to(astroprojects_folder)
 
     db = db[db_raw_fields].sort_values(['SESSION', 'SEQUENCE', 'FRAME']).reset_index()
     db['idx'] = pd.RangeIndex(stop=db.shape[0])

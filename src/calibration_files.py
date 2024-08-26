@@ -2,7 +2,7 @@ from pathlib import Path
 import subprocess
 
 from src.exceptions import NoSuitableDarkAvailable
-from src.fits_utils import get_fields_from_foldername, get_foldername, get_fields_from_fits
+from src.fits_utils import get_fields_from_foldername, get_raw_foldername, get_fields_from_fits
 from src.database import db_raw_fields
 
 
@@ -52,7 +52,7 @@ def select_master_dark(from_folder: Path, params: dict) -> Path:
         nearest_ses = get_nearest_session(params['SESSION'], ses_set)
         reduced_list = [x for x in reduced_list if x['SESSION'] == nearest_ses]
 
-    return src_darks / ('master_' + get_foldername(reduced_list[0]) + '.fit')
+    return src_darks / ('master_' + get_raw_foldername(reduced_list[0]) + '.fit')
 
 
 def create_sequence(folder_path: Path) -> str:

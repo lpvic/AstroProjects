@@ -19,7 +19,7 @@ default_values = {'ASIFILE': '', 'NEWFILE': '', 'IMAGETYP': '', 'DATE-OBS': '', 
 
 format_fields = {'ASIFILE': '{}', 'NEWFILE': '{}', 'IMAGETYP': '{}', 'DATE-OBS': '{}', 'SESSION': '{}',
                  'SEQUENCE': '{:0>2d}', 'FRAME': '{:0>2d}', 'INSTRUME': '{}', 'FILTER': '{}',
-                 'EXPTIME': '{:0>8.1f}ms', 'XBINNING': 'Bin{:0>1d}', 'GAIN': 'Gain{:0>3d}', 'SET-TEMP': '{:.1f}C',
+                 'EXPTIME': '{:0>8.1f}ms', 'XBINNING': 'bin{:0>1d}', 'GAIN': 'gain{:0>3d}', 'SET-TEMP': '{:.1f}C',
                  'GUIDECAM': '{}', 'MOUNT': '{}', 'TELESCOP': '{}', 'LENS': '{}', 'FOCALLEN': '{:d}',
                  'OBJECT': '{}', 'OBSERVER': '{}',  'SITENAME': '{}', 'SITELAT': '{}', 'SITELON': '{}', 'AUTHOR': ''}
 
@@ -29,18 +29,21 @@ instrument = {v: k for k, v in camera.items()}
 
 
 def convert(field: str, value: str | int | float) -> str | int | float:
-    if field in ['ASIFILE', 'NEWFILE', 'IMAGETYP', 'DATE-OBS', 'SESSION', 'INSTRUME', 'FILTER', 'GUIDECAM', 'MOUNT',
-                 'TELESCOP', 'LENS', 'OBJECT', 'OBSERVER', 'AUTHOR', 'SITENAME', 'SITELAT', 'SITELON']:
-        return value
+    if field in ['ASIFILE', 'NEWFILE']:
+        return Path(value)
     elif field in ['SEQUENCE', 'FRAME', 'XBINNING', 'GAIN', 'FOCALLEN']:
         return to_int(value)
     elif field in ['EXPTIME', 'SET-TEMP']:
         return to_float(value)
+    else:
+        return value
 
 
 def read_asiair_database(db_path: Path) -> pd.DataFrame:
     out = pd.read_csv(db_path, sep=';', na_values='NaN', keep_default_na=False).drop_duplicates()
     for field in ['SEQUENCE', 'FRAME', 'XBINNING', 'GAIN', 'FOCALLEN', 'EXPTIME', 'SET-TEMP']:
         out[field] = pd.to_numeric(out[field], errors='coerce').fillna(default_values['field'])
+    for field in ['ASIFILE', 'NEWFILE']:
+        out[field] = out[field].apply(lambda x: Path(x))
 
     return out

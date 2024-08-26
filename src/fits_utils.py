@@ -17,19 +17,19 @@ def update_fits_fields(file: Path, new_data: dict) -> None:
 def get_fields_from_foldername(foldername: Path) -> dict:
     out = {}
     fields = foldername.name.split('_')
-    out['IMAGETYP'] = {fields[0].title(), }
+    out['IMAGETYP'] = {fields[0].lower(), }
 
-    if out['IMAGETYP'] == 'Dark':
+    if out['IMAGETYP'] == 'dark':
         fields[5] = camera[fields[5]]
         out = {**out, 'SESSION': fields[1], 'SEQUENCE': int(fields[2]), 'EXPTIME': float(fields[3][:-2]) / 1000.,
                'XBINNING': int(fields[4][3:]), 'INSTRUME': fields[5], 'GAIN': int(fields[6][4:]),
                'SET-TEMP': float(fields[7][:-1])}
-    elif out['IMAGETYP'] == 'Flat':
+    elif out['IMAGETYP'] == 'flat':
         fields[5] = camera[fields[5]]
         out = {**out, 'SESSION': fields[1], 'SEQUENCE': int(fields[2]),
                'EXPTIME': float(fields[3][:-2]) / 1000., 'XBINNING': int(fields[4][3:]), 'INSTRUME': fields[5],
                'FILTER': fields[6], 'GAIN': int(fields[7][4:]), 'SET-TEMP': float(fields[8][:-1])}
-    elif out['IMAGETYP'] == 'Light':
+    elif out['IMAGETYP'] == 'light':
         fields[6] = camera[fields[6]]
         out = {**out, 'OBJECT': fields[1], 'SESSION': fields[2], 'SEQUENCE': int(fields[3]),
                'EXPTIME': float(fields[4][:-2]) / 1000., 'XBINNING': int(fields[5][3:]), 'INSTRUME': fields[6],
@@ -45,7 +45,10 @@ def get_fields_from_fits(file: Path, fields: list) -> dict:
         header = fits_file[0].header
         for field in fields:
             try:
-                out[field] = convert(field, header[field])
+                if field == 'IMAGETYP':
+                    out[field] = header[field].lower()
+                else:
+                    out[field] = header[field]
             except KeyError:
                 out[field] = default_values[field]
 
@@ -53,20 +56,20 @@ def get_fields_from_fits(file: Path, fields: list) -> dict:
 
 
 def get_raw_foldername(d: dict) -> str:
-    fullname = [format_fields['IMAGETYP'].format(d['IMAGETYP']).replace(' ', '').title(),  # 0
-                format_fields['OBJECT'].format(d['OBJECT']).replace(' ', ''),  # 1
-                format_fields['SESSION'].format(d['SESSION']),  # 2
-                format_fields['SEQUENCE'].format(d['SEQUENCE']),  # 3
-                format_fields['EXPTIME'].format(1000 * d['IMAGETYP']),  # 4
-                format_fields['XBINNING'].format(d['XBINNING']),  # 5
-                format_fields['INSTRUME'].format(instrument(d['INSTRUME'])),  # 6
-                format_fields['FILTER'].format(d['FILTER']),  # 7
-                format_fields['GAIN'].format(d['GAIN']),  # 8
-                format_fields['SET-TEMP'].format(d['SET-TEMP']),  # 9
+    fullname = [format_fields['IMAGETYP'].format(d['IMAGETYP']).replace(' ', '').lower(),
+                format_fields['OBJECT'].format(d['OBJECT']).replace(' ', ''),
+                format_fields['SESSION'].format(d['SESSION']),
+                format_fields['SEQUENCE'].format(d['SEQUENCE']),
+                format_fields['EXPTIME'].format(1000 * d['EXPTIME']),
+                format_fields['XBINNING'].format(d['XBINNING']),
+                format_fields['INSTRUME'].format(instrument[d['INSTRUME']]),
+                format_fields['FILTER'].format(d['FILTER']),
+                format_fields['GAIN'].format(d['GAIN']),
+                format_fields['SET-TEMP'].format(d['SET-TEMP']),
                 ]
-    fields = {'Dark': [0, 2, 3, 4, 5, 6, 8, 9],
-           'Flat': [0, 2, 3, 4, 5, 6, 7, 8, 9],
-           'Light': [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]}
+    fields = {'dark': [0, 2, 3, 4, 5, 6, 8, 9],
+           'flat': [0, 2, 3, 4, 5, 6, 7, 8, 9],
+           'light': [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]}
 
     return '_'.join([fullname[i] for i in fields[fullname[0]]])
 

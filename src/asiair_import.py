@@ -4,7 +4,7 @@ import pandas as pd
 
 from src.fits_utils import update_fits_fields, get_fields_from_fits, get_session, get_raw_filename, get_raw_foldername
 from src.gen_utils import update_dict, get_between, multi_pattern_rglob
-from src.database import db_raw_fields
+from src.database import db_raw_fields, read_asiair_database
 
 
 pd.set_option('display.max_rows', None)
@@ -41,11 +41,10 @@ def read_asiair_files(asiair_folder: Path, astroprojects_folder: Path) -> None:
     db_path = astroprojects_folder / 'asiair_database.csv'
     dest_path = {'dark': r'sources/darks', 'flat': r'sources/flats', 'light': r'sources/lights'}
     if db_path.exists():
-        db = pd.read_csv(db_path, sep=';', na_values='NaN', keep_default_na=False).drop_duplicates()
+        db = read_asiair_database(db_path)
     else:
         db = pd.DataFrame(columns=db_raw_fields)
 
-    c = 1
     for file in multi_pattern_rglob(asiair_folder, ['Dark_*.fit', 'Flat_*.fit', 'Light_*.fit']):
         img_type = file.stem.split('_')[0].lower()
         rel_file = Path(file.relative_to(asiair_folder))
@@ -75,11 +74,6 @@ def read_asiair_files(asiair_folder: Path, astroprojects_folder: Path) -> None:
 
         data = update_dict(data, additional_data)
         db = pd.DataFrame(data, index=[0]) if db.empty else pd.concat([db, pd.DataFrame(data, index=[0])])
-        # print(c, data['SET-TEMP'])
-        c = c + 1
-    db['SET-TEMP'] = pd.to_numeric(db['SET-TEMP'], errors='coerce').fillna(-99.0)
-    db['SESSION'] = db['SESSION'].astype(str)
-    db['SEQUENCE'] = db['SEQUENCE'].fillna(0).astype(int)
 
     df_sessions = db[['SESSION', 'SEQUENCE']].copy()
     df_sessions = df_sessions.groupby('SESSION').max()
@@ -118,10 +112,7 @@ def update_metadata(astroprojects_folder: Path) -> None:
     dest_path = {'dark': astroprojects_folder / r'sources/darks', 'flat': astroprojects_folder / r'sources/flats',
                  'light': astroprojects_folder / r'sources/lights'}
 
-    db = pd.read_csv(db_path, sep=';', na_values='NaN', keep_default_na=False)
-    db['SET-TEMP'] = pd.to_numeric(db['SET-TEMP'], errors='coerce').fillna(-99.0)
-    db['SESSION'] = db['SESSION'].astype(str)
-    db['SEQUENCE'] = db['SEQUENCE'].fillna(0).astype(int)
+    db = read_asiair_database(db_path)
     db['NEWFOLDER'] = db['NEWFILE'].apply(lambda x: str(Path(x).parent))
     db = db.set_index('NEWFOLDER')
 
@@ -134,8 +125,8 @@ def update_metadata(astroprojects_folder: Path) -> None:
                 db.at[idx, field] = row[field]
 
     db = db.reset_index()[db_raw_fields]
-    db['NEWFILE'] = [(dest_path[x['IMAGETYP']] / get_foldername(x) / get_filename(x)).relative_to(astroprojects_folder)
-                     for x in db.to_dict(orient='records')]
+    db['NEWFILE'] = [(dest_path[x['IMAGETYP']] / get_raw_foldername(x) / get_raw_filename(x))
+                     .relative_to(astroprojects_folder) for x in db.to_dict(orient='records')]
     db.to_csv(astroprojects_folder / 'asiair_database.csv', sep=';', index=False)
 
 
@@ -144,10 +135,7 @@ def import_files(asiair_folder: Path, astroprojects_folder: Path) -> None:
     dest_path = {'dark': astroprojects_folder / r'sources/darks', 'flat': astroprojects_folder / r'sources/flats',
                  'light': astroprojects_folder / r'sources/lights'}
 
-    db = pd.read_csv(db_path, sep=';', na_values='NaN', keep_default_na=False)
-    db['SET-TEMP'] = pd.to_numeric(db['SET-TEMP'], errors='coerce').fillna(-99.0)
-    db['SESSION'] = db['SESSION'].astype(str)
-    db['SEQUENCE'] = db['SEQUENCE'].fillna(0).astype(int)
+    db = read_asiair_database(db_path)
 
     for idx, row in db.iterrows():
         src_file = asiair_folder / Path(row['ASIFILE'])

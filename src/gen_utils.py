@@ -1,6 +1,7 @@
 import itertools
-
 from pathlib import Path
+
+import numpy as np
 
 
 def update_dict(source_dict: dict, new_values: dict) -> dict:
@@ -19,3 +20,17 @@ def get_between(value: int, intervals: list[tuple[int, int]]) -> tuple[int, int]
 
 def multi_pattern_rglob(pth: Path, patterns: list[str]) -> list:
     return list(itertools.chain.from_iterable(pth.rglob(pattern) for pattern in patterns))
+
+
+def to_float(s: str) -> float:
+    try:
+        float(s)
+    except ValueError:
+        return -99.0
+
+
+def to_int(s: str) -> int:
+    try:
+        int(s)
+    except ValueError:
+        return 0

@@ -32,23 +32,6 @@ def renumber(filelist: list[Path], basename: str, startindex: int = 1) -> None:
         idx += 1
 
 
-def get_file_list(srcdir: Path, basename: str) -> list[Path]:
-    lst = []
-    for f in os.listdir(srcdir):
-        if f.startswith(basename) and f.endswith('.fit'):
-            lst.append(srcdir / f)
-
-    return lst
-
-
-def get_list_dir(srcdir: str, prefix: str = '', ext: str = '') -> list[str]:
-    file_list = []
-    for file in os.listdir(srcdir):
-        if file.endswith(ext) & file.startswith(prefix):
-            file_list.append(file)
-    return file_list
-
-
 def __file_operation(src: Path, dst: Path, operation: callable):
     if isinstance(src, list):
         if isinstance(dst, list):

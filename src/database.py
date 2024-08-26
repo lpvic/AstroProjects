@@ -1,3 +1,11 @@
+db_raw_fields = ['ASIFILE', 'NEWFILE', 'IMAGETYP', 'DATE-OBS', 'SESSION', 'SEQUENCE', 'FRAME', 'INSTRUME', 'FILTER',
+                 'EXPTIME', 'XBINNING', 'GAIN', 'SET-TEMP', 'GUIDECAM', 'MOUNT', 'TELESCOP', 'LENS', 'FOCALLEN',
+                 'OBJECT', 'OBSERVER',  'SITENAME', 'SITELAT', 'SITELON']
+
+db_stacked_fields = ['FILE', 'IMAGETYP', 'DATE-OBS', 'SESSION', 'SEQUENCE', 'INSTRUME', 'FILTER',
+                     'EXPTIME', 'XBINNING', 'GAIN', 'SET-TEMP', 'GUIDECAM', 'MOUNT', 'TELESCOP', 'LENS', 'FOCALLEN',
+                     'OBJECT', 'AUTHOR',  'SITENAME', 'SITELAT', 'SITELON']
+
 db_raw_fields_type = {
     'dark': ['ASIFILE', 'NEWFILE', 'IMAGETYP', 'DATE-OBS', 'SESSION', 'SEQUENCE', 'FRAME', 'INSTRUME', 'EXPTIME',
              'XBINNING', 'GAIN', 'SET-TEMP', 'OBSERVER'],
@@ -7,10 +15,6 @@ db_raw_fields_type = {
               'EXPTIME', 'XBINNING', 'GAIN', 'SET-TEMP', 'GUIDECAM', 'MOUNT', 'TELESCOP', 'LENS', 'FOCALLEN',
               'OBJECT', 'OBSERVER',  'SITENAME', 'SITELAT', 'SITELON']
 }
-
-db_raw_fields = ['ASIFILE', 'NEWFILE', 'IMAGETYP', 'DATE-OBS', 'SESSION', 'SEQUENCE', 'FRAME', 'INSTRUME', 'FILTER',
-                 'EXPTIME', 'XBINNING', 'GAIN', 'SET-TEMP', 'GUIDECAM', 'MOUNT', 'TELESCOP', 'LENS', 'FOCALLEN',
-                 'OBJECT', 'OBSERVER',  'SITENAME', 'SITELAT', 'SITELON']
 
 db_stacked_fields_type = {
     'master_dark': ['FILE', 'IMAGETYP', 'DATE-OBS', 'SESSION', 'SEQUENCE', 'INSTRUME', 'EXPTIME', 'XBINNING', 'GAIN',
@@ -22,6 +26,3 @@ db_stacked_fields_type = {
                 'OBJECT', 'AUTHOR',  'SITENAME', 'SITELAT', 'SITELON']
 }
 
-db_stacked_fields = ['FILE', 'IMAGETYP', 'DATE-OBS', 'SESSION', 'SEQUENCE', 'INSTRUME', 'FILTER',
-                     'EXPTIME', 'XBINNING', 'GAIN', 'SET-TEMP', 'GUIDECAM', 'MOUNT', 'TELESCOP', 'LENS', 'FOCALLEN',
-                     'OBJECT', 'AUTHOR',  'SITENAME', 'SITELAT', 'SITELON']

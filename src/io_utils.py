@@ -3,14 +3,6 @@ from pathlib import Path
 import shutil
 
 
-def mkdir(path: str) -> bool:
-    try:
-        os.makedirs(path)
-        return True
-    except FileExistsError:
-        return False
-
-
 def cp(src: Path, dst: Path) -> None:
     __file_operation(src, dst, shutil.copy2)
 

@@ -4,14 +4,17 @@ from dateutil import tz
 
 from astropy.io import fits
 
-from src.database import default_values, format_fields, camera, instrument, convert
+from src.database import default_values, format_fields, camera, instrument
 
 
 def update_fits_fields(file: Path, new_data: dict) -> None:
     with fits.open(file, mode='update') as fits_file:
         header = fits_file[0].header
         for field in list(new_data.keys()):
-            header[field] = new_data[field]
+            try:
+                header[field] = new_data[field]
+            except ValueError:
+                header[field] = str(new_data[field])
 
 
 def get_fields_from_foldername(foldername: Path) -> dict:

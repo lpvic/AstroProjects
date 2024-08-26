@@ -1,8 +1,6 @@
 import itertools
 from pathlib import Path
 
-import numpy as np
-
 
 def update_dict(source_dict: dict, new_values: dict) -> dict:
     for k, v in new_values.items():

@@ -9,7 +9,7 @@ sources_paths = {'dark': astroprojects_folder / r'sources/darks', 'flat': astrop
 
 initialize_folders(astroprojects_folder)
 read_asiair_files(asiar_root_folder, astroprojects_folder)
-# update_metadata(astroprojects_folder)
+update_metadata(astroprojects_folder)
 # import_files(asiar_root_folder, astroprojects_folder)
 
 # for folder in [x for x in list(sources_paths['dark'].rglob('*')) if x.is_dir()]:

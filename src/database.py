@@ -13,7 +13,7 @@ db_stacked_fields = ['FILE', 'IMAGETYP', 'DATE-OBS', 'SESSION', 'SEQUENCE', 'INS
                      'OBJECT', 'AUTHOR',  'SITENAME', 'SITELAT', 'SITELON']
 
 default_values = {'ASIFILE': '', 'NEWFILE': '', 'IMAGETYP': '', 'DATE-OBS': '', 'SESSION': '19000101', 'SEQUENCE': 0,
-                  'FRAME': 0, 'INSTRUME': '', 'FILTER': '', 'EXPTIME': 0., 'XBINNING': 0, 'GAIN': -1,
+                  'FRAME': 0, 'INSTRUME': '', 'FILTER': 'Unk', 'EXPTIME': 0., 'XBINNING': 0, 'GAIN': -1,
                   'SET-TEMP': -99., 'GUIDECAM': '', 'MOUNT': '', 'TELESCOP': '', 'LENS': '', 'FOCALLEN': 0,
                   'OBJECT': '', 'OBSERVER': '',  'SITENAME': '', 'SITELAT': '', 'SITELON': '', 'AUTHOR': ''}
 
@@ -42,8 +42,10 @@ def convert(field: str, value: str | int | float) -> str | int | float:
 def read_asiair_database(db_path: Path) -> pd.DataFrame:
     out = pd.read_csv(db_path, sep=';', na_values='NaN', keep_default_na=False).drop_duplicates()
     for field in ['SEQUENCE', 'FRAME', 'XBINNING', 'GAIN', 'FOCALLEN', 'EXPTIME', 'SET-TEMP']:
-        out[field] = pd.to_numeric(out[field], errors='coerce').fillna(default_values['field'])
+        out[field] = pd.to_numeric(out[field], errors='coerce').fillna(default_values[field])
     for field in ['ASIFILE', 'NEWFILE']:
         out[field] = out[field].apply(lambda x: Path(x))
 
+    out = out.astype({'SEQUENCE': 'int64', 'FRAME': 'int64', 'XBINNING': 'int64', 'GAIN': 'int64',
+                      'FOCALLEN': 'int64', 'EXPTIME': 'float64', 'SET-TEMP': 'float64'})
     return out

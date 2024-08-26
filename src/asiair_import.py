@@ -48,7 +48,7 @@ def read_asiair_files(asiair_folder: Path, astroprojects_folder: Path) -> None:
     for file in multi_pattern_rglob(asiair_folder, ['Dark_*.fit', 'Flat_*.fit', 'Light_*.fit']):
         img_type = file.stem.split('_')[0].lower()
         rel_file = Path(file.relative_to(asiair_folder))
-        if (str(rel_file) in db['ASIFILE'].values) or file.stat().st_size == 0:
+        if (rel_file in db['ASIFILE'].values) or file.stat().st_size == 0:
             continue
 
         data = get_fields_from_fits(file, db_raw_fields)
@@ -63,8 +63,7 @@ def read_asiair_files(asiair_folder: Path, astroprojects_folder: Path) -> None:
                                'SITENAME': '', 'SITELAT': '', 'SITELON': ''}
         elif img_type == 'flat':
             additional_data = {'TELESCOP': get_telescope(data['FOCALLEN']), 'LENS': get_lens(data['FOCALLEN']),
-                               'GUIDECAM': '', 'FILTER': 'Unk' if data['FILTER'] == '' else data['FILTER'],
-                               'MOUNT': '', 'SITENAME': '', 'SITELAT': '', 'SITELON': ''}
+                               'GUIDECAM': '', 'MOUNT': '', 'SITENAME': '', 'SITELAT': '', 'SITELON': ''}
         elif img_type == 'light':
             additional_data = {'TELESCOP': get_telescope(data['FOCALLEN']), 'LENS': get_lens(data['FOCALLEN']),
                                'OBJECT': file.stem.split('_')[1].replace(' ', ''),
@@ -121,10 +120,12 @@ def update_metadata(astroprojects_folder: Path) -> None:
 
     for idx, row in updates.iterrows():
         for field in row.index:
-            if row[field] != '':
+            if (row[field] != '') and (idx in db.index):
                 db.at[idx, field] = row[field]
 
     db = db.reset_index()[db_raw_fields]
+    db = db.astype({'SEQUENCE': 'int64', 'FRAME': 'int64', 'XBINNING': 'int64', 'GAIN': 'int64',
+                    'FOCALLEN': 'int64', 'EXPTIME': 'float64', 'SET-TEMP': 'float64'})
     db['NEWFILE'] = [(dest_path[x['IMAGETYP']] / get_raw_foldername(x) / get_raw_filename(x))
                      .relative_to(astroprojects_folder) for x in db.to_dict(orient='records')]
     db.to_csv(astroprojects_folder / 'asiair_database.csv', sep=';', index=False)

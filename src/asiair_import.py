@@ -5,7 +5,6 @@ import pandas as pd
 from src.fits_utils import update_fits_fields, get_fields_from_fits, get_session, get_raw_filename, get_raw_foldername
 from src.gen_utils import update_dict, get_between, multi_pattern_rglob
 from src.database import db_raw_fields, read_asiair_database
-from src.io_utils import cp
 
 
 pd.set_option('display.max_rows', None)
@@ -143,6 +142,5 @@ def import_files(asiair_folder: Path, astroprojects_folder: Path) -> None:
         if not dst_file.parent.exists():
             dst_file.parent.mkdir(parents=True, exist_ok=True)
         if not dst_file.exists():
-            # src_file.rename(dst_file)
-            cp(src_file, dst_file)
+            src_file.rename(dst_file)
             update_fits_fields(dst_file, row.to_dict())

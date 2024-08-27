@@ -1,3 +1,0 @@
-requires {{siril_version}}
-
-seqstat {{sequence}} stats_{{sequence}}.csv full

@@ -2,8 +2,9 @@ from pathlib import Path
 import subprocess
 
 from src.exceptions import NoSuitableDarkAvailable
-from src.fits_utils import get_fields_from_foldername, get_raw_foldername, get_fields_from_fits
+from src.fits_utils import get_fields_from_foldername, get_raw_foldername, get_fields_from_fits, update_fits_fields
 from src.database import db_raw_fields
+from src.io_utils import cp
 
 
 def get_nearest_exposure(value: float, exposures: set) -> float:
@@ -34,7 +35,6 @@ def select_master_dark(from_folder: Path, params: dict) -> Path:
     reduced_list = []
     for dark in darks_list:
         dark_params = get_fields_from_fits(dark, db_raw_fields)
-        print(dark_params)
         if ((dark_params['XBINNING'] == params['XBINNING']) and
                 (dark_params['INSTRUME'] == params['INSTRUME']) and
                 (dark_params['GAIN'] == params['GAIN']) and
@@ -93,12 +93,9 @@ def create_master_script(folder_path: Path, siril_version: str = '1.2.0') -> Non
         script_content = script_content.replace('{{sequence}}', folder_path.name)
         script_content = script_content.replace('{{out_file}}', str(rel_out_path))
         if img_type == 'flat':
-            try:
-                master_dark = select_master_dark(folder_path.parents[-2], get_fields_from_foldername(folder_path))
-            except NoSuitableDarkAvailable:
-                return
-            rel_master_dark = folder_path.relative_to(master_dark, walk_up=True)
-            script_content = script_content.replace('{{master_bias}}', rel_master_dark)
+            master_dark = select_master_dark(folder_path.parents[-2], get_fields_from_foldername(folder_path))
+            rel_master_dark = master_dark.relative_to(folder_path, walk_up=True)
+            script_content = script_content.replace('{{master_bias}}', str(rel_master_dark))
         f_ssf.write(script_content)
 
 
@@ -111,9 +108,22 @@ def create_all_scripts(from_folder: Path) -> None:
 def create_master_file(folder: Path, siril_version: str = '1.2.0', force: bool = False,
                        clean: bool = True) -> None:
     img_type = folder.name.split('_')[0].lower()
-    if (img_type != 'dark') and (img_type != 'flat'):
+    master_file = folder.parents[-2] / r'masters' / (img_type + 's') / ('master_' + folder.name + '.fit')
+    if ((img_type != 'dark') and (img_type != 'flat')) or (master_file.exists() and not force):
         return
 
     create_sequence(folder)
-    create_master_script(folder, siril_version)
-    subprocess.run('siril-cli -d ' + str(folder) + ' -s ' + str(folder / ('create_master_' + img_type + '.ssf')))
+    try:
+        create_master_script(folder, siril_version)
+        files_list = list(folder.glob('*.fit'))
+        nb_files = len(files_list)
+        subprocess.run('siril-cli -d ' + str(folder) + ' -s ' + str(folder / ('create_master_' + img_type + '.ssf')))
+        if nb_files == 1:
+            cp(files_list[0].with_name('pp_' + files_list[0].name), master_file)
+        update_fits_fields(master_file, get_fields_from_foldername(folder))
+        if clean:
+            for f in folder.glob('pp_*.fit'):
+                f.unlink(missing_ok=True)
+    except NoSuitableDarkAvailable:
+        print('No dark for ' + str(folder.name))
+        return

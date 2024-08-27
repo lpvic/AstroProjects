@@ -20,7 +20,7 @@ def update_fits_fields(file: Path, new_data: dict) -> None:
 def get_fields_from_foldername(foldername: Path) -> dict:
     out = {}
     fields = foldername.name.split('_')
-    out['IMAGETYP'] = {fields[0].lower(), }
+    out['IMAGETYP'] = fields[0].lower()
 
     if out['IMAGETYP'] == 'dark':
         fields[5] = camera[fields[5]]

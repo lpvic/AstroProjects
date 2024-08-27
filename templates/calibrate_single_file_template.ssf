@@ -1,4 +1,0 @@
-requires {{siril_version}}
-
-calibrate_single {{image}} -bias={{master_bias}} -prefix=pp_
-seqstat {{sequence}} stats_{{sequence}}.csv full

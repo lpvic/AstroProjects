@@ -1,4 +1,0 @@
-requires {{siril_version}}
-
-convert stats_master_{{img_type}}
-seqstat stats_master_{{img_type}} stats_master_{{img_type}}.csv full

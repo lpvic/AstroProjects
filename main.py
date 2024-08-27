@@ -1,7 +1,6 @@
 from pathlib import Path
 from src.asiair_import import initialize_folders, read_asiair_files, update_metadata, import_files
 from src.calibration_files import create_master_file
-from src.fits_utils import get_fields_from_foldername
 from time import time
 
 timing = [time()]

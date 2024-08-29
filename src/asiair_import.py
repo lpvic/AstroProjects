@@ -2,11 +2,11 @@ from pathlib import Path
 
 import pandas as pd
 
-from src.fits_utils import update_fits_fields, get_fields_from_fits, get_session, get_raw_filename, get_raw_foldername
-from src.gen_utils import update_dict, get_between, multi_pattern_rglob
+from src.utils.fits_utils import update_fits_fields, get_fields_from_fits, get_session, get_raw_filename, get_raw_foldername
+from src.utils.gen_utils import update_dict, get_between, multi_pattern_rglob
 from src.database import db_raw_fields, read_asiair_database
 from src.folder_structure import FolderStructure
-from src.io_utils import cp
+from src.utils.io_utils import cp
 
 
 pd.set_option('display.max_rows', None)

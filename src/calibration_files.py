@@ -2,9 +2,9 @@ from pathlib import Path
 import subprocess
 
 from src.exceptions import NoSuitableDarkAvailable
-from src.fits_utils import get_fields_from_foldername, get_raw_foldername, get_fields_from_fits, update_fits_fields
+from src.utils.fits_utils import get_fields_from_foldername, get_raw_foldername, get_fields_from_fits, update_fits_fields
 from src.database import db_raw_fields
-from src.io_utils import cp
+from src.utils.io_utils import cp
 from src.folder_structure import FolderStructure
 
 

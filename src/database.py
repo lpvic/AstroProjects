@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from src.gen_utils import to_int, to_float
+from src.utils.gen_utils import to_int, to_float
 
 db_raw_fields = ['ASIFILE', 'NEWFILE', 'IMAGETYP', 'DATE-OBS', 'SESSION', 'SEQUENCE', 'FRAME', 'INSTRUME', 'FILTER',
                  'EXPTIME', 'XBINNING', 'GAIN', 'SET-TEMP', 'GUIDECAM', 'MOUNT', 'TELESCOP', 'LENS', 'FOCALLEN',

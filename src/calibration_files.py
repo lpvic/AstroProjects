@@ -5,6 +5,7 @@ from src.exceptions import NoSuitableDarkAvailable
 from src.fits_utils import get_fields_from_foldername, get_raw_foldername, get_fields_from_fits, update_fits_fields
 from src.database import db_raw_fields
 from src.io_utils import cp
+from src.folder_structure import FolderStructure
 
 
 def get_nearest_exposure(value: float, exposures: set) -> float:
@@ -29,9 +30,8 @@ def get_nearest_session(value: int, sessions: set) -> int:
     return out
 
 
-def select_master_dark(from_folder: Path, params: dict) -> Path:
-    src_darks = from_folder / r'masters\darks'
-    darks_list = src_darks.glob('master_*.fit')
+def select_master_dark(folders: FolderStructure, params: dict) -> Path:
+    darks_list = folders.master_darks.glob('master_*.fit')
     reduced_list = []
     for dark in darks_list:
         dark_params = get_fields_from_fits(dark, db_raw_fields)
@@ -52,7 +52,7 @@ def select_master_dark(from_folder: Path, params: dict) -> Path:
         nearest_ses = get_nearest_session(params['SESSION'], ses_set)
         reduced_list = [x for x in reduced_list if x['SESSION'] == nearest_ses]
 
-    return src_darks / ('master_' + get_raw_foldername(reduced_list[0]) + '.fit')
+    return folders.master_darks / ('master_' + get_raw_foldername(reduced_list[0]) + '.fit')
 
 
 def create_sequence(folder_path: Path) -> str:
@@ -79,7 +79,7 @@ def create_all_sequences(from_folder: Path) -> None:
         create_sequence(folder)
 
 
-def create_master_script(folder_path: Path, siril_version: str = '1.2.0') -> None:
+def create_master_script(folder_path: Path, folders: FolderStructure, siril_version: str = '1.2.0') -> None:
     img_type = folder_path.name.split('_')[0].lower()
     if (img_type != 'dark') and (img_type != 'flat'):
         return
@@ -87,13 +87,13 @@ def create_master_script(folder_path: Path, siril_version: str = '1.2.0') -> Non
     with open(r'templates\create_master_' + img_type + '_template.ssf', 'r') as f_script_template:
         master_template = f_script_template.read()
     with open(folder_path / ('create_master_' + img_type + '.ssf'), 'w') as f_ssf:
-        out_file = folder_path.parents[-2] / r'masters' / (img_type + 's') / ('master_' + folder_path.name + '.fit')
+        out_file = folders.masters_dict[img_type] / ('master_' + folder_path.name + '.fit')
         rel_out_path = out_file.relative_to(folder_path, walk_up=True)
         script_content = master_template.replace('{{siril_version}}', siril_version)
         script_content = script_content.replace('{{sequence}}', folder_path.name)
         script_content = script_content.replace('{{out_file}}', str(rel_out_path))
         if img_type == 'flat':
-            master_dark = select_master_dark(folder_path.parents[-2], get_fields_from_foldername(folder_path))
+            master_dark = select_master_dark(folders, get_fields_from_foldername(folder_path))
             rel_master_dark = master_dark.relative_to(folder_path, walk_up=True)
             script_content = script_content.replace('{{master_bias}}', str(rel_master_dark))
         f_ssf.write(script_content)
@@ -105,10 +105,10 @@ def create_all_scripts(from_folder: Path) -> None:
         create_master_script(folder)
 
 
-def create_master_file(folder: Path, siril_version: str = '1.2.0', force: bool = False,
+def create_master_file(folder: Path, folders: FolderStructure, siril_version: str = '1.2.0', force: bool = False,
                        clean: bool = True) -> None:
     img_type = folder.name.split('_')[0].lower()
-    master_file = folder.parents[-2] / r'masters' / (img_type + 's') / ('master_' + folder.name + '.fit')
+    master_file = folders.masters_dict[img_type] / ('master_' + folder.name + '.fit')
     if ((img_type != 'dark') and (img_type != 'flat')) or (master_file.exists() and not force):
         return
 

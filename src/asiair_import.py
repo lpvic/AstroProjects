@@ -5,6 +5,7 @@ import pandas as pd
 from src.fits_utils import update_fits_fields, get_fields_from_fits, get_session, get_raw_filename, get_raw_foldername
 from src.gen_utils import update_dict, get_between, multi_pattern_rglob
 from src.database import db_raw_fields, read_asiair_database
+from src.folder_structure import FolderStructure
 
 
 pd.set_option('display.max_rows', None)
@@ -37,9 +38,9 @@ def get_lens(focal: int) -> str:
     return lens[get_between(focal, list(lens.keys()))]
 
 
-def read_asiair_files(asiair_folder: Path, astroprojects_folder: Path) -> None:
-    db_path = astroprojects_folder / 'asiair_database.csv'
-    dest_path = {'dark': r'sources/darks', 'flat': r'sources/flats', 'light': r'sources/lights'}
+def read_asiair_files(asiair_folder: Path, folders: FolderStructure) -> None:
+    db_path = folders.metadata / 'asiair_database.csv'
+
     if db_path.exists():
         db = read_asiair_database(db_path)
     else:
@@ -88,9 +89,9 @@ def read_asiair_files(asiair_folder: Path, astroprojects_folder: Path) -> None:
             else:
                 df_sessions.at[row['SESSION'], 'SEQUENCE'] = df_sessions.at[row['SESSION'], 'SEQUENCE']
             db.at[idx, 'SEQUENCE'] = df_sessions.at[row['SESSION'], 'SEQUENCE']
-            db.at[idx, 'NEWFILE'] = ((astroprojects_folder / dest_path[db.at[idx, 'IMAGETYP']] /
+            db.at[idx, 'NEWFILE'] = ((folders.sources_dict[db.at[idx, 'IMAGETYP']] /
                                       get_raw_foldername(db.loc[idx].to_dict()) /
-                                      get_raw_filename(db.loc[idx].to_dict()))).relative_to(astroprojects_folder)
+                                      get_raw_filename(db.loc[idx].to_dict()))).relative_to(folders.root)
 
     db = db[db_raw_fields].sort_values(['SESSION', 'SEQUENCE', 'FRAME']).reset_index()
     db['idx'] = pd.RangeIndex(stop=db.shape[0])
@@ -105,11 +106,9 @@ def read_asiair_files(asiair_folder: Path, astroprojects_folder: Path) -> None:
     db.to_csv(db_path, sep=';', index=False)
 
 
-def update_metadata(astroprojects_folder: Path) -> None:
-    db_path = astroprojects_folder / 'asiair_database.csv'
-    updates_path = astroprojects_folder / 'metadata_updates.csv'
-    dest_path = {'dark': astroprojects_folder / r'sources/darks', 'flat': astroprojects_folder / r'sources/flats',
-                 'light': astroprojects_folder / r'sources/lights'}
+def update_metadata(folders: FolderStructure) -> None:
+    db_path = folders.metadata / 'asiair_database.csv'
+    updates_path = folders.metadata / 'metadata_updates.csv'
 
     db = read_asiair_database(db_path)
     db['NEWFOLDER'] = db['NEWFILE'].apply(lambda x: str(Path(x).parent))
@@ -126,18 +125,18 @@ def update_metadata(astroprojects_folder: Path) -> None:
     db = db.reset_index()[db_raw_fields]
     db = db.astype({'SEQUENCE': 'int64', 'FRAME': 'int64', 'XBINNING': 'int64', 'GAIN': 'int64',
                     'FOCALLEN': 'int64', 'EXPTIME': 'float64', 'SET-TEMP': 'float64'})
-    db['NEWFILE'] = [(dest_path[x['IMAGETYP']] / get_raw_foldername(x) / get_raw_filename(x))
-                     .relative_to(astroprojects_folder) for x in db.to_dict(orient='records')]
-    db.to_csv(astroprojects_folder / 'asiair_database.csv', sep=';', index=False)
+    db['NEWFILE'] = [(folders.sources_dict[x['IMAGETYP']].relative_to(folders.root) / get_raw_foldername(x) /
+                      get_raw_filename(x)).relative_to(folders.root) for x in db.to_dict(orient='records')]
+    db.to_csv(folders.metadata / 'asiair_database.csv', sep=';', index=False)
 
 
-def import_files(asiair_folder: Path, astroprojects_folder: Path) -> None:
-    db_path = astroprojects_folder / 'asiair_database.csv'
+def import_files(asiair_folder: Path, folders: FolderStructure) -> None:
+    db_path = folders.metadata / 'asiair_database.csv'
     db = read_asiair_database(db_path)
 
     for idx, row in db.iterrows():
         src_file = asiair_folder / Path(row['ASIFILE'])
-        dst_file = astroprojects_folder / Path(row['NEWFILE'])
+        dst_file = folders.root / Path(row['NEWFILE'])
 
         if not dst_file.parent.exists():
             dst_file.parent.mkdir(parents=True, exist_ok=True)

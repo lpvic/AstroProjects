@@ -114,7 +114,7 @@ def create_master_file(folder: Path, folders: FolderStructure, siril_version: st
 
     create_sequence(folder)
     try:
-        create_master_script(folder, siril_version)
+        create_master_script(folder, folders, siril_version)
         files_list = list(folder.glob('*.fit'))
         nb_files = len(files_list)
         subprocess.run('siril-cli -d ' + str(folder) + ' -s ' + str(folder / ('create_master_' + img_type + '.ssf')))

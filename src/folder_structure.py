@@ -2,8 +2,8 @@ from pathlib import Path
 
 
 class FolderStructure:
-    def __init__(self, root_folder: Path) -> None:
-        self._root = root_folder
+    def __init__(self, root_folder: str | Path) -> None:
+        self._root = Path(root_folder)
         self._sources = self._root / 'sources'
         self._dark_sources = self._sources / 'darks'
         self._flat_sources = self._sources / 'flats'

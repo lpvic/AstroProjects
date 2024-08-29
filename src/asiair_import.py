@@ -6,6 +6,7 @@ from src.fits_utils import update_fits_fields, get_fields_from_fits, get_session
 from src.gen_utils import update_dict, get_between, multi_pattern_rglob
 from src.database import db_raw_fields, read_asiair_database
 from src.folder_structure import FolderStructure
+from src.io_utils import cp
 
 
 pd.set_option('display.max_rows', None)
@@ -126,7 +127,7 @@ def update_metadata(folders: FolderStructure) -> None:
     db = db.astype({'SEQUENCE': 'int64', 'FRAME': 'int64', 'XBINNING': 'int64', 'GAIN': 'int64',
                     'FOCALLEN': 'int64', 'EXPTIME': 'float64', 'SET-TEMP': 'float64'})
     db['NEWFILE'] = [(folders.sources_dict[x['IMAGETYP']].relative_to(folders.root) / get_raw_foldername(x) /
-                      get_raw_filename(x)).relative_to(folders.root) for x in db.to_dict(orient='records')]
+                      get_raw_filename(x)) for x in db.to_dict(orient='records')]
     db.to_csv(folders.metadata / 'asiair_database.csv', sep=';', index=False)
 
 
@@ -141,5 +142,6 @@ def import_files(asiair_folder: Path, folders: FolderStructure) -> None:
         if not dst_file.parent.exists():
             dst_file.parent.mkdir(parents=True, exist_ok=True)
         if not dst_file.exists():
-            src_file.rename(dst_file)
+            # src_file.rename(dst_file)
+            cp(src_file, dst_file)
             update_fits_fields(dst_file, row.to_dict())

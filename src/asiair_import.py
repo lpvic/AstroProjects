@@ -7,6 +7,7 @@ from src.utils.gen_utils import update_dict, get_between, multi_pattern_rglob
 from src.database import db_raw_fields, read_asiair_database
 from src.folder_structure import FolderStructure
 from src.utils.io_utils import cp
+from src.stats import calculate_stats, create_stats_hdu, stats_formulas
 
 
 pd.set_option('display.max_rows', None)
@@ -40,17 +41,17 @@ def get_lens(focal: int) -> str:
 
 
 def read_asiair_files(asiair_folder: Path, folders: FolderStructure) -> None:
-    db_path = folders.metadata / 'asiair_database.csv'
+    files_db_path = folders.metadata / 'asiair_database.csv'
 
-    if db_path.exists():
-        db = read_asiair_database(db_path)
+    if files_db_path.exists():
+        files_db = read_asiair_database(files_db_path)
     else:
-        db = pd.DataFrame(columns=db_raw_fields)
+        files_db = pd.DataFrame(columns=db_raw_fields)
 
     for file in multi_pattern_rglob(asiair_folder, ['Dark_*.fit', 'Flat_*.fit', 'Light_*.fit']):
         img_type = file.stem.split('_')[0].lower()
         rel_file = Path(file.relative_to(asiair_folder))
-        if (rel_file in db['ASIFILE'].values) or file.stat().st_size == 0:
+        if (rel_file in files_db['ASIFILE'].values) or file.stat().st_size == 0:
             continue
 
         data = get_fields_from_fits(file, db_raw_fields)
@@ -74,37 +75,38 @@ def read_asiair_files(asiair_folder: Path, folders: FolderStructure) -> None:
             continue
 
         data = update_dict(data, additional_data)
-        db = pd.DataFrame(data, index=[0]) if db.empty else pd.concat([db, pd.DataFrame(data, index=[0])])
+        files_db = pd.DataFrame(data, index=[0]) if files_db.empty\
+            else pd.concat([files_db, pd.DataFrame(data, index=[0])])
 
-    df_sessions = db[['SESSION', 'SEQUENCE']].copy()
+    df_sessions = files_db[['SESSION', 'SEQUENCE']].copy()
     df_sessions = df_sessions.groupby('SESSION').max()
 
-    db = db.sort_values('DATE-OBS')
-    db['idx'] = pd.RangeIndex(stop=db.shape[0])
-    db = db.set_index('idx')
+    files_db = files_db.sort_values('DATE-OBS')
+    files_db['idx'] = pd.RangeIndex(stop=files_db.shape[0])
+    files_db = files_db.set_index('idx')
 
-    for idx, row in db.iterrows():
+    for idx, row in files_db.iterrows():
         if row['SEQUENCE'] == 0:
-            if row['FRAME'] <= (db.loc[idx - 1, 'FRAME'] if idx > 0 else db.loc[idx, 'FRAME']):
+            if row['FRAME'] <= (files_db.loc[idx - 1, 'FRAME'] if idx > 0 else files_db.loc[idx, 'FRAME']):
                 df_sessions.at[row['SESSION'], 'SEQUENCE'] = df_sessions.at[row['SESSION'], 'SEQUENCE'] + 1
             else:
                 df_sessions.at[row['SESSION'], 'SEQUENCE'] = df_sessions.at[row['SESSION'], 'SEQUENCE']
-            db.at[idx, 'SEQUENCE'] = df_sessions.at[row['SESSION'], 'SEQUENCE']
-            db.at[idx, 'NEWFILE'] = ((folders.sources_dict[db.at[idx, 'IMAGETYP']] /
-                                      get_raw_foldername(db.loc[idx].to_dict()) /
-                                      get_raw_filename(db.loc[idx].to_dict()))).relative_to(folders.root)
+            files_db.at[idx, 'SEQUENCE'] = df_sessions.at[row['SESSION'], 'SEQUENCE']
+            files_db.at[idx, 'NEWFILE'] = ((folders.sources_dict[files_db.at[idx, 'IMAGETYP']] /
+                                      get_raw_foldername(files_db.loc[idx].to_dict()) /
+                                      get_raw_filename(files_db.loc[idx].to_dict()))).relative_to(folders.root)
 
-    db = db[db_raw_fields].sort_values(['SESSION', 'SEQUENCE', 'FRAME']).reset_index()
-    db['idx'] = pd.RangeIndex(stop=db.shape[0])
-    db = db.set_index('idx')
+    files_db = files_db[db_raw_fields].sort_values(['SESSION', 'SEQUENCE', 'FRAME']).reset_index()
+    files_db['idx'] = pd.RangeIndex(stop=files_db.shape[0])
+    files_db = files_db.set_index('idx')
 
-    for idx, row in db.iterrows():
-        if row['SEQUENCE'] != (db.loc[idx - 1, 'SEQUENCE'] if idx > 0 else 0):
-            db.at[idx, 'FRAME'] = 1
+    for idx, row in files_db.iterrows():
+        if row['SEQUENCE'] != (files_db.loc[idx - 1, 'SEQUENCE'] if idx > 0 else 0):
+            files_db.at[idx, 'FRAME'] = 1
         else:
-            db.at[idx, 'FRAME'] = db.at[idx - 1, 'FRAME'] + 1
+            files_db.at[idx, 'FRAME'] = files_db.at[idx - 1, 'FRAME'] + 1
 
-    db.to_csv(db_path, sep=';', index=False)
+    files_db.to_csv(files_db_path, sep=';', index=False)
 
 
 def update_metadata(folders: FolderStructure) -> None:
@@ -131,7 +133,7 @@ def update_metadata(folders: FolderStructure) -> None:
     db.to_csv(folders.metadata / 'asiair_database.csv', sep=';', index=False)
 
 
-def import_files(asiair_folder: Path, folders: FolderStructure) -> None:
+def import_files(asiair_folder: Path, folders: FolderStructure, move=False, force=False) -> None:
     db_path = folders.metadata / 'asiair_database.csv'
     db = read_asiair_database(db_path)
 
@@ -139,9 +141,13 @@ def import_files(asiair_folder: Path, folders: FolderStructure) -> None:
         src_file = asiair_folder / Path(row['ASIFILE'])
         dst_file = folders.root / Path(row['NEWFILE'])
 
-        if not dst_file.parent.exists():
-            dst_file.parent.mkdir(parents=True, exist_ok=True)
-        if not dst_file.exists():
-            # src_file.rename(dst_file)
-            cp(src_file, dst_file)
-            update_fits_fields(dst_file, row.to_dict())
+        if src_file.exists():
+            if not dst_file.exists() or force:
+                if not dst_file.parent.exists():
+                    dst_file.parent.mkdir(parents=True, exist_ok=True)
+                if move:
+                    src_file.rename(dst_file)
+                else:
+                    cp(src_file, dst_file)
+                update_fits_fields(dst_file, row.to_dict())
+

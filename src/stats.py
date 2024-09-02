@@ -4,6 +4,8 @@ import numpy as np
 from astropy.io import fits
 from astropy.stats import biweight_midvariance
 
+from src.folder_structure import FolderStructure
+
 
 stats_formulas = {'MIN': lambda x: np.min(x),
                   'MAX': lambda x: np.max(x),

@@ -12,12 +12,12 @@ db_stacked_fields = ['FILE', 'IMAGETYP', 'DATE-OBS', 'SESSION', 'SEQUENCE', 'INS
                      'EXPTIME', 'XBINNING', 'GAIN', 'SET-TEMP', 'GUIDECAM', 'MOUNT', 'TELESCOP', 'LENS', 'FOCALLEN',
                      'OBJECT', 'AUTHOR',  'SITENAME', 'SITELAT', 'SITELON']
 
-default_values = {'ASIFILE': '', 'NEWFILE': '', 'IMAGETYP': '', 'DATE-OBS': '', 'SESSION': '19000101', 'SEQUENCE': 0,
-                  'FRAME': 0, 'INSTRUME': '', 'FILTER': 'Unk', 'EXPTIME': 0., 'XBINNING': 0, 'GAIN': -1,
+default_values = {'ASIFILE': '', 'NEWFILE': '', 'FILE': '', 'IMAGETYP': '', 'DATE-OBS': '', 'SESSION': '19000101',
+                  'SEQUENCE': 0, 'FRAME': 0, 'INSTRUME': '', 'FILTER': 'Unk', 'EXPTIME': 0., 'XBINNING': 0, 'GAIN': -1,
                   'SET-TEMP': -99., 'GUIDECAM': '', 'MOUNT': '', 'TELESCOP': '', 'LENS': '', 'FOCALLEN': 0,
                   'OBJECT': '', 'OBSERVER': '',  'SITENAME': '', 'SITELAT': '', 'SITELON': '', 'AUTHOR': ''}
 
-format_fields = {'ASIFILE': '{}', 'NEWFILE': '{}', 'IMAGETYP': '{}', 'DATE-OBS': '{}', 'SESSION': '{}',
+format_fields = {'ASIFILE': '{}', 'NEWFILE': '{}', 'FILE': {}, 'IMAGETYP': '{}', 'DATE-OBS': '{}', 'SESSION': '{}',
                  'SEQUENCE': '{:0>2d}', 'FRAME': '{:0>2d}', 'INSTRUME': '{}', 'FILTER': '{}',
                  'EXPTIME': '{:0>8.1f}ms', 'XBINNING': 'bin{:0>1d}', 'GAIN': 'gain{:0>3d}', 'SET-TEMP': '{:.1f}C',
                  'GUIDECAM': '{}', 'MOUNT': '{}', 'TELESCOP': '{}', 'LENS': '{}', 'FOCALLEN': '{:d}',

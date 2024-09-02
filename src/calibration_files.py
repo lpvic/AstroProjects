@@ -117,13 +117,21 @@ def create_master_file(folder: Path, folders: FolderStructure, siril_version: st
         create_master_script(folder, folders, siril_version)
         files_list = list(folder.glob('*.fit'))
         nb_files = len(files_list)
-        subprocess.run('siril-cli -d ' + str(folder) + ' -s ' + str(folder / ('create_master_' + img_type + '.ssf')))
+        subprocess.run('siril-cli -d ' + str(folder) + ' -s ' + str(folder / ('create_master_' + img_type + '.ssf')),
+                       stdout=folder / 'master.log')
         if nb_files == 1:
             cp(files_list[0].with_name('pp_' + files_list[0].name), master_file)
+        fields = get_fields_from_foldername(folder)
+        fields['AUTHOR'] = get_fields_from_fits(files_list[0], ['OBSERVER'])
+        fields['LENS'] = get_fields_from_fits(files_list[0], ['LENS'])
         update_fits_fields(master_file, get_fields_from_foldername(folder))
+
         if clean:
             for f in folder.glob('pp_*.fit'):
                 f.unlink(missing_ok=True)
     except NoSuitableDarkAvailable:
         print('No dark for ' + str(folder.name))
         return
+
+def create_master_database(folders: FolderStructure) -> None:
+    pass

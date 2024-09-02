@@ -83,4 +83,5 @@ for file in files_list:
         stats_db = pd.DataFrame(data, index=[0]) if stats_db.empty \
             else pd.concat([stats_db, pd.DataFrame(data, index=[0])])
         stats_db.to_csv(stats_db_path, sep=';', index=None)
+
 print('Done.')

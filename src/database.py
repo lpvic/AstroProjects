@@ -39,13 +39,33 @@ def convert(field: str, value: str | int | float) -> str | int | float:
         return value
 
 
-def read_asiair_database(db_path: Path) -> pd.DataFrame:
+def read_files_database(db_path: Path) -> pd.DataFrame:
     out = pd.read_csv(db_path, sep=';', na_values='NaN', keep_default_na=False).drop_duplicates()
     for field in ['SEQUENCE', 'FRAME', 'XBINNING', 'GAIN', 'FOCALLEN', 'EXPTIME', 'SET-TEMP']:
-        out[field] = pd.to_numeric(out[field], errors='coerce').fillna(default_values[field])
-    for field in ['ASIFILE', 'NEWFILE']:
-        out[field] = out[field].apply(lambda x: Path(x))
+        try:
+            out[field] = pd.to_numeric(out[field], errors='coerce').fillna(default_values[field])
+        except KeyError:
+            continue
+    for field in ['ASIFILE', 'NEWFILE', 'FILE']:
+        try:
+            out[field] = out[field].apply(lambda x: Path(x))
+        except KeyError:
+            continue
 
-    out = out.astype({'SEQUENCE': 'int64', 'FRAME': 'int64', 'XBINNING': 'int64', 'GAIN': 'int64',
-                      'FOCALLEN': 'int64', 'EXPTIME': 'float64', 'SET-TEMP': 'float64'})
+    try:
+        out = out.astype({'SEQUENCE': 'int64', 'FRAME': 'int64', 'XBINNING': 'int64', 'GAIN': 'int64',
+                          'FOCALLEN': 'int64', 'EXPTIME': 'float64', 'SET-TEMP': 'float64'})
+    except KeyError:
+        out = out.astype({'SEQUENCE': 'int64', 'XBINNING': 'int64', 'GAIN': 'int64',
+                          'FOCALLEN': 'int64', 'EXPTIME': 'float64', 'SET-TEMP': 'float64'})
+    return out
+
+
+def read_stats_database(db_path: Path) -> pd.DataFrame:
+    out = pd.read_csv(db_path, sep=';', na_values='NaN', keep_default_na=False).drop_duplicates()
+    for field in ['FILE']:
+        try:
+            out[field] = out[field].apply(lambda x: Path(x))
+        except KeyError:
+            continue
     return out

@@ -1,3 +1,3 @@
 requires {{siril_version}}
 
-stack {{sequence}} rej 3 3 -nonorm -out={{out_file}}
+stack {{sequence}}_ rej 3 3 -nonorm -out={{out_file}}

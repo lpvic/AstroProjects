@@ -4,7 +4,7 @@ import pandas as pd
 
 from src.utils.fits_utils import update_fits_fields, get_fields_from_fits, get_session, get_raw_filename, get_raw_foldername
 from src.utils.gen_utils import update_dict, get_between, multi_pattern_rglob
-from src.database import db_raw_fields, read_asiair_database
+from src.database import db_raw_fields, read_files_database
 from src.folder_structure import FolderStructure
 from src.utils.io_utils import cp
 from src.stats import calculate_stats, create_stats_hdu, stats_formulas
@@ -44,7 +44,7 @@ def read_asiair_files(asiair_folder: Path, folders: FolderStructure) -> None:
     files_db_path = folders.metadata / 'asiair_database.csv'
 
     if files_db_path.exists():
-        files_db = read_asiair_database(files_db_path)
+        files_db = read_files_database(files_db_path)
     else:
         files_db = pd.DataFrame(columns=db_raw_fields)
 
@@ -113,7 +113,7 @@ def update_metadata(folders: FolderStructure) -> None:
     db_path = folders.metadata / 'asiair_database.csv'
     updates_path = folders.metadata / 'metadata_updates.csv'
 
-    db = read_asiair_database(db_path)
+    db = read_files_database(db_path)
     db['NEWFOLDER'] = db['NEWFILE'].apply(lambda x: str(Path(x).parent))
     db = db.set_index('NEWFOLDER')
 
@@ -135,7 +135,7 @@ def update_metadata(folders: FolderStructure) -> None:
 
 def import_files(asiair_folder: Path, folders: FolderStructure, move=False, force=False) -> None:
     db_path = folders.metadata / 'asiair_database.csv'
-    db = read_asiair_database(db_path)
+    db = read_files_database(db_path)
 
     for idx, row in db.iterrows():
         src_file = asiair_folder / Path(row['ASIFILE'])

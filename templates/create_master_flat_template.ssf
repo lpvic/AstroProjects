@@ -1,4 +1,4 @@
 requires {{siril_version}}
 
-calibrate {{sequence}} -bias={{master_bias}} -prefix=pp_
-stack pp_{{sequence}} rej 3 3 -norm=mul -out={{out_file}}
+calibrate {{sequence}}_ -bias={{master_bias}} -prefix=pp_
+stack pp_{{sequence}}_ rej 3 3 -norm=mul -out={{out_file}}

@@ -4,6 +4,8 @@ import numpy as np
 from astropy.io import fits
 from astropy.stats import biweight_midvariance
 
+from src.utils.gen_utils import update_dict
+
 from src.folder_structure import FolderStructure
 
 
@@ -18,8 +20,10 @@ stats_formulas = {'MIN': lambda x: np.min(x),
                   'AAD': lambda x: np.mean(np.absolute(x - np.mean(x)))}  # Average Absolute Deviation (AAD)
 
 
-def calculate_stats(fits_file: Path) -> dict:
-    out = {}
+def calculate_stats(fits_file: Path) -> list:
+    out = []
+    channels_rgb = ['R', 'G', 'B']
+
     with fits.open(fits_file) as fin:
         header = fin[0].header
         if abs(header['BITPIX']) == 16:
@@ -28,12 +32,15 @@ def calculate_stats(fits_file: Path) -> dict:
             data = np.round(fin[0].data * 65535).astype('int64')
 
     if header['NAXIS'] == 2:
-        for k, v in stats_formulas.items():
-            out[k] = v(data)
+        st = {'CHANNEL': 'BW'}
+        st = update_dict(st, {k: v(data) for k, v in stats_formulas.items()})
+        out.append(st)
 
     elif header['NAXIS'] == 3:
         for channel in range(3):
-            out[channel] = {k: v(data[channel, :, :]) for k, v in stats_formulas.items()}
+            st = {'CHANNEL': channels_rgb[channel]}
+            st = update_dict(st, {k: v(data[channel, :, :]) for k, v in stats_formulas.items()})
+            out.append(st)
 
     return out
 

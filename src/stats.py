@@ -1,12 +1,15 @@
 from pathlib import Path
 
+import numpy
 import numpy as np
 from astropy.io import fits
 from astropy.stats import biweight_midvariance
 
 from src.utils.gen_utils import update_dict
 
-from src.folder_structure import FolderStructure
+from scipy.signal import argrelextrema
+from matplotlib import pyplot as plt
+from scipy.stats import mode
 
 
 stats_formulas = {'MIN': lambda x: np.min(x),
@@ -17,7 +20,8 @@ stats_formulas = {'MIN': lambda x: np.min(x),
                   'VAR': lambda x: np.var(x),
                   'MAD': lambda x: np.median(np.absolute(x - np.median(x))),  # Median Absolute Deviation (MAD)
                   'SBW': lambda x: np.sqrt(biweight_midvariance(x)),  # Square Root of Biweight Midvariance
-                  'AAD': lambda x: np.mean(np.absolute(x - np.mean(x)))}  # Average Absolute Deviation (AAD)
+                  'AAD': lambda x: np.mean(np.absolute(x - np.mean(x))),  # Average Absolute Deviation (AAD)
+                  'BGN': 9999999}  # Reserved for background noise calculation
 
 
 def calculate_stats(fits_file: Path) -> list:
@@ -50,3 +54,9 @@ def create_stats_hdu(stats: dict) -> fits.BinTableHDU:
     col_value = fits.Column(name='VALUE', format='E', array=np.array(stats.values()))
 
     return fits.BinTableHDU.from_columns([col_name, col_value])
+
+
+def moving_average(a, n=2):
+    ret = np.cumsum(a, dtype=float)
+    ret[n:] = ret[n:] - ret[:-n]
+    return ret[n - 1:] / n

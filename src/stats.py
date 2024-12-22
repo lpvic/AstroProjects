@@ -21,7 +21,7 @@ stats_formulas = {'MIN': lambda x: np.min(x),
                   'MAD': lambda x: np.median(np.absolute(x - np.median(x))),  # Median Absolute Deviation (MAD)
                   'SBW': lambda x: np.sqrt(biweight_midvariance(x)),  # Square Root of Biweight Midvariance
                   'AAD': lambda x: np.mean(np.absolute(x - np.mean(x))),  # Average Absolute Deviation (AAD)
-                  'BGN': 9999999}  # Reserved for background noise calculation
+                  'BGN': lambda x: 9999999}  # Reserved for background noise calculation
 
 
 def calculate_stats(fits_file: Path) -> list:

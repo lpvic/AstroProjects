@@ -22,15 +22,15 @@ elif platform.system() == 'Windows':
 else:
     exit(1)
 
-# print('Creating ASIAir Database...')
-# read_asiair_files(asiar_root_folder, astroprojects_folder)
-# print('Updating Metadata...')
-# update_metadata(astroprojects_folder)
-# print('Calculating Statistics...')
-#
-# print('Importing Source Files...')
-# import_files(asiar_root_folder, astroprojects_folder)
-#
+print('Creating ASIAir Database...')
+read_asiair_files(asiar_root_folder, astroprojects_folder)
+print('Updating Metadata...')
+update_metadata(astroprojects_folder)
+print('Calculating Statistics...')
+
+print('Importing Source Files...')
+import_files(asiar_root_folder, astroprojects_folder)
+
 print('Creating Master Darks...')
 for folder in [x for x in list(astroprojects_folder.sources_dict['dark'].rglob('*')) if x.is_dir()]:
     print('Processing {}...'.format(str(folder)))

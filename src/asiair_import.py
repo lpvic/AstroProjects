@@ -42,17 +42,37 @@ def get_lens(focal: int) -> str:
 
 def read_asiair_files(asiair_folder: Path, folders: FolderStructure) -> None:
     files_db_path = folders.metadata / 'asiair_database.csv'
+    corrections_db_path = folders.metadata / 'corrections.csv'
+
+    exclude = ['batch_stack_tmp', 'GuidingDarkLibrary', 'Stacked', '174MM']
 
     if files_db_path.exists():
         files_db = read_files_database(files_db_path)
     else:
         files_db = pd.DataFrame(columns=db_raw_fields)
 
+    files_corrections = pd.read_csv(corrections_db_path, sep=';', na_values='',
+                                    keep_default_na=False).drop_duplicates()
+
+    try:
+        files_corrections['ASIFILE'] = files_corrections['ASIFILE'].apply(lambda x: Path(x))
+    except KeyError:
+        pass
+
     for file in multi_pattern_rglob(asiair_folder, ['Dark_*.fit', 'Flat_*.fit', 'Light_*.fit']):
+        file_str = str(file.relative_to(asiair_folder))
+        if any(excl_item in file_str for excl_item in exclude):
+            continue
         img_type = file.stem.split('_')[0].lower()
         rel_file = Path(file.relative_to(asiair_folder))
         if (rel_file in files_db['ASIFILE'].values) or file.stat().st_size == 0:
             continue
+
+        new_filter = 'No Change'
+        new_object = 'No Change'
+        if rel_file in files_corrections['ASIFILE'].values:
+            new_filter = files_corrections.loc[files_corrections['ASIFILE'] == rel_file]['FILTER'].item()
+            new_object = files_corrections.loc[files_corrections['ASIFILE'] == rel_file]['OBJECT'].item()
 
         data = get_fields_from_fits(file, db_raw_fields)
         data = update_dict(data, {
@@ -66,11 +86,12 @@ def read_asiair_files(asiair_folder: Path, folders: FolderStructure) -> None:
                                'SITENAME': '', 'SITELAT': '', 'SITELON': ''}
         elif img_type == 'flat':
             additional_data = {'TELESCOP': get_telescope(data['FOCALLEN']), 'LENS': get_lens(data['FOCALLEN']),
-                               'GUIDECAM': '', 'MOUNT': '', 'SITENAME': '', 'SITELAT': '', 'SITELON': ''}
+                               'GUIDECAM': '', 'MOUNT': '', 'SITENAME': '', 'SITELAT': '', 'SITELON': '',
+                               'FILTER': new_filter if (new_filter != 'No Change') else data['FILTER']}
         elif img_type == 'light':
             additional_data = {'TELESCOP': get_telescope(data['FOCALLEN']), 'LENS': get_lens(data['FOCALLEN']),
-                               'OBJECT': file.stem.split('_')[1].replace(' ', ''),
-                               'FILTER': 'Unk' if data['FILTER'] == '' else data['FILTER']}
+                               'OBJECT': new_object if (new_object != 'No Change') else file.stem.split('_')[1].replace(' ', ''),
+                               'FILTER': new_filter if (new_filter != 'No Change') else data['FILTER']}
         else:
             continue
 

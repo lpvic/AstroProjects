@@ -86,12 +86,13 @@ def get_session(date_obs: str, exptime: float, frame: int) -> int:
     try:
         dt = datetime.strptime(date_obs, '%Y-%m-%dT%H:%M:%S.%f')
     except ValueError:
+        print("Session Error: {}".format(date_obs))
         return 19000101
 
     dt = dt.replace(tzinfo=tz.gettz('UTC'))
     dt = dt.astimezone(tz.gettz('Europe/Madrid'))
     dt = dt.replace(tzinfo=None)
-    if (dt - timedelta(seconds=(frame - 1) * exptime)).hour < 12:
+    if (dt - timedelta(seconds=(frame - 1) * exptime)).hour < 20:
         return datetime.strftime(dt - timedelta(days=1), '%Y%m%d')
     else:
         return (dt - timedelta(seconds=(frame - 1) * exptime)).strftime('%Y%m%d')

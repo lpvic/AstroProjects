@@ -15,10 +15,10 @@ from src.stats import calculate_stats
 
 if platform.system() == 'Linux':
     astroprojects_folder = FolderStructure(r'/nas/sdm1/AstroProjects_2')
-    asiar_root_folder = Path(r'/nas/sdm1/Asiair')
+    asiar_root_folder = Path(r'/nas/sdm1/ASIAIR')
 elif platform.system() == 'Windows':
     astroprojects_folder = FolderStructure(r'E:\AstroProjects_2')
-    asiar_root_folder = Path(r'E:\Asi')
+    asiar_root_folder = Path(r'E:\ASIAIR')
 else:
     exit(1)
 

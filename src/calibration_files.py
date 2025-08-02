@@ -19,11 +19,11 @@ def get_nearest_exposure(value: float, exposures: set) -> float:
     return out
 
 
-def get_nearest_session(value: int, sessions: set) -> int:
+def get_nearest_session(value: int, sessions: set[int]) -> int:
     min_diff = 1000000.
     out = None
     for ses in sessions:
-        diff = abs(value - ses)
+        diff = abs(int(value) - int(ses))
         if diff < min_diff:
             min_diff = diff
             out = ses
